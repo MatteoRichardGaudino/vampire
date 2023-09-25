@@ -58,6 +58,8 @@
 
 #include "Saturation/SaturationAlgorithm.hpp"
 
+#include "BindingFragments/ProvingHelper.h"
+
 #include "FMB/ModelCheck.hpp"
 
 #if CHECK_LEAKS
@@ -165,6 +167,13 @@ Problem *doProving()
   }
 
   ProvingHelper::runVampireSaturation(*prb, *env.options);
+  return prb;
+}
+VWARN_UNUSED
+Problem *do1BProving()
+{
+  Problem *prb = getPreprocessedProblem(); // TODO verifica l'input
+  BindingFragments::ProvingHelper::run1BSatAlgorithm(*prb, *env.options);
   return prb;
 }
 
@@ -395,6 +404,23 @@ void vampireMode()
       vampireReturnValue = VAMP_RESULT_STATUS_SUCCESS;
   }
 } // vampireMode
+
+void oneBindingMode(){
+//  if (env.options->mode() == Options::Mode::CONSEQUENCE_ELIMINATION) {
+//      env.options->setUnusedPredicateDefinitionRemoval(false);
+//  }
+
+  ScopedPtr<Problem> prb(do1BProving());
+
+  env.beginOutput();
+  UIHelper::outputResult(env.out());
+  env.endOutput();
+
+  if (env.statistics->terminationReason == Statistics::REFUTATION
+      || env.statistics->terminationReason == Statistics::SATISFIABLE) {
+      vampireReturnValue = VAMP_RESULT_STATUS_SUCCESS;
+  }
+}
 
 void spiderMode()
 {
@@ -631,6 +657,9 @@ int main(int argc, char* argv[])
     case Options::Mode::CONSEQUENCE_ELIMINATION:
     case Options::Mode::VAMPIRE:
       vampireMode();
+      break;
+    case Options::Mode::ONE_BINDING:
+      oneBindingMode();
       break;
 
     case Options::Mode::CASC:

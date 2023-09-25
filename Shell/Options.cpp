@@ -122,7 +122,9 @@ void Options::init()
                                         "spider",
                                         "tclausify",
                                         "tpreprocess",
-                                        "vampire"});
+                                        "vampire",
+                                        "1b"
+                                  });
     _mode.description=
     "Select the mode of operation. Choices are:\n"
     "  -vampire: the standard mode of operation for first-order theorem proving\n"
@@ -131,6 +133,7 @@ void Options::init()
     "  -preprocess,axiom_selection,clausify: modes for producing output\n      for other solvers.\n"
     "  -tpreprocess,tclausify: output modes for theory input (clauses are quantified\n      with sort information).\n"
     "  -output,profile: output information about the problem\n"
+    "  -1b: Solve one binding problems\n"
     "Some modes are not currently maintained (get in touch if interested):\n"
     "  -bpa: perform bound propagation\n"
     "  -consequence_elimination: perform consequence elimination\n"

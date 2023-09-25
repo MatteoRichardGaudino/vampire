@@ -398,7 +398,8 @@ public:
     SPIDER,
     TCLAUSIFY,
     TPREPROCESS,
-    VAMPIRE
+    VAMPIRE,
+    ONE_BINDING
 };
 
   enum class Schedule : unsigned int {

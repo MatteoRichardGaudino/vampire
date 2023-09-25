@@ -768,7 +768,12 @@ set(VAMPIRE_SOURCES
     ${VAMPIRE_CASC_SOURCES}
     Forwards.hpp
     "${CMAKE_CURRENT_BINARY_DIR}/version.cpp"
-    )
+        BindingFragments/ProvingHelper.cpp
+        BindingFragments/ProvingHelper.h
+        BindingFragments/OneBindingSat.cpp
+        BindingFragments/OneBindingSat.h
+        BindingFragments/OneBindingSat.h
+)
 
 ################################################################
 # compiler flag configuration
