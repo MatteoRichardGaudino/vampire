@@ -124,6 +124,37 @@ Problem* getPreprocessedProblem()
 
   return prb;
 } // getPreprocessedProblem
+Problem* getPreprocessedProblemForBindingFragments(){
+#ifdef __linux__
+  unsigned saveInstrLimit = env.options->instructionLimit();
+  if (env.options->parsingDoesNotCount()) {
+    env.options->setInstructionLimit(0);
+  }
+#endif
+
+  Problem* prb = UIHelper::getInputProblem(*env.options);
+
+#ifdef __linux__
+  if (env.options->parsingDoesNotCount()) {
+    env.options->setInstructionLimit(saveInstrLimit+Timer::elapsedMegaInstructions());
+  }
+#endif
+
+  TIME_TRACE(TimeTrace::PREPROCESSING);
+
+  // this will provide warning if options don't make sense for problem
+  env.options->checkProblemOptionConstraints(prb->getProperty(), /*before_preprocessing = */ true);
+
+  Shell::Preprocess prepro(*env.options);
+  prepro.turnClausifierOff();
+  prepro.keepSimplifyStep();
+
+  //phases for preprocessing are being set inside the preprocess method
+  prepro.preprocess(*prb);
+
+  return prb;
+} // getPreprocessedProblem for binding fragments mode
+
 
 void explainException(Exception& exception)
 {
@@ -172,7 +203,8 @@ Problem *doProving()
 VWARN_UNUSED
 Problem *do1BProving()
 {
-  Problem *prb = getPreprocessedProblem(); // TODO verifica l'input
+//  Problem *prb = getPreprocessedProblem();
+  Problem* prb = UIHelper::getInputProblem(*env.options);
   BindingFragments::ProvingHelper::run1BSatAlgorithm(*prb, *env.options);
   return prb;
 }
