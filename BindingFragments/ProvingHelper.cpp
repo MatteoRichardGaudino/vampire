@@ -14,30 +14,13 @@ using namespace Kernel;
 
 void BindingFragments::ProvingHelper::run1BSatAlgorithm(Problem &prb, const Options &opt){
   auto list = prb.units();
-//  UnitList::Iterator it(list);
-//  cout<< "Units: "<< list->toString() << endl;
+  UnitList::Iterator uit(list);
+  int i = 0;
+  while (uit.hasNext()){
+    cout<< "Unit "<< i << uit.next()->toString() << endl;
+  }
 
-//  while (it.hasNext()){
-//    auto unit = it.next();
-//    auto formula = unit->getFormula();
-//    cout<< "Formula toString: " << formula->toString() << endl;
-//    cout<< "Formula connective: " << formula->connective() << endl;
-//
-//    if(formula->connective() == Connective::AND || formula->connective() == Connective::OR) {
-//      FormulaList::Iterator it2(formula->args());
-//      while (it2.hasNext()) {
-//        auto formula2 = it2.next();
-//        cout << "\tFormula2 toString: " << formula2->toString() << endl;
-//        cout << "\tFormula2 connective: " << formula2->connective() << endl;
-//      }
-//    }
-//    if(formula->connective() == Connective::FORALL){
-//      auto f = formula->qarg();
-//      cout<< "\tFormula2 toString: " << f->toString() << endl;
-//    }
-//  }
-
-  cout<< endl;
+  cout<< endl << endl;
   auto isOneBinding = BindingClassifier::isOneBinding(list);
   cout<< "Is one Binding? "<< isOneBinding << endl;
   cout<< endl;
@@ -49,5 +32,9 @@ void BindingFragments::ProvingHelper::run1BSatAlgorithm(Problem &prb, const Opti
   cout<< endl;
   auto isDB = BindingClassifier::isDisjunctiveBinding(list);
   cout<< "Is Disjunctive Binding? "<< isDB << endl;
+  cout<< endl;
+  cout<< endl;
+  auto classification = BindingClassifier::classify(list);
+  cout<< "Classification fragment: "<< classification << endl;
   cout<< endl;
 }

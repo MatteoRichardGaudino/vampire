@@ -6,6 +6,7 @@
 #define VAMPIRE_BINDINGCLASSIFIER_H
 
 #include "Kernel/Unit.hpp"
+#include "Kernel/Formula.hpp"
 
 namespace BindingFragments {
 
@@ -13,11 +14,28 @@ using namespace Kernel;
 
 
 enum Fragment{
-  ONE_BINDING,
-  UNIVERSAL_ONE_BINDING,
-  CONJUNCTIVE_BINDING,
-  DISJUNCTIVE_BINDING,
-  NONE
+  UNIVERSAL_ONE_BINDING = 0,
+  ONE_BINDING = 1,
+  CONJUNCTIVE_BINDING = 2,
+  DISJUNCTIVE_BINDING = 3,
+  NONE = 4
+};
+
+class BindingClassification{
+public:
+  Fragment fragment;
+  TermList* term;
+
+  BindingClassification();
+  BindingClassification(Fragment fragment, TermList *term);
+
+  inline bool is(Fragment fragment1) const{
+    return fragment == fragment1 || (fragment1 == ONE_BINDING && fragment == UNIVERSAL_ONE_BINDING);
+  }
+
+  static Fragment compare(const Fragment &first, const Fragment &second);
+  static BindingClassification compare(const BindingClassification &first, const BindingClassification &second, Connective connective);
+private:
 };
 
 class BindingClassifier {
@@ -60,6 +78,8 @@ private:
   static bool _isConjunctiveBindingHelper(Formula* formula, TermList *term);
   static bool _isDisjunctiveBindingHelper(Formula* formula, TermList *term);
   static TermList* _findATerm(Formula* formula);
+
+  static BindingClassification _classifyHelper(Formula* formula);
 };
 
 }

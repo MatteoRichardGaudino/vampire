@@ -12,10 +12,116 @@ using namespace Kernel;
 using namespace BindingFragments;
 
 Fragment BindingClassifier::classify(UnitList* units){
-  return Fragment::NONE;
+  UnitList::Iterator it(units);
+  Fragment classification;
+
+  if(it.hasNext()){
+    auto formula = it.next()->getFormula();
+    classification = classify(formula);
+    cout<< "[classify] Formula: " << formula->toString() << " fragment: "<< classification << endl;
+    if(!it.hasNext() || classification == NONE) return classification;
+  }
+  while (it.hasNext()){
+    auto formula = it.next()->getFormula();
+    auto classification2 = classify(formula);
+    cout<< "[classify] Formula: " << formula->toString() << " fragment: "<< classification2 << endl;
+    classification = BindingClassification::compare(classification, classification2);
+    cout<< "\t[classify-Compare] fragment: "<< classification << endl;
+    if(classification == NONE) return classification;
+  }
+  return classification;
 }
 Fragment BindingClassifier::classify(Formula* formula){
-  return Fragment::NONE;
+  switch (formula->connective()) {
+
+    case LITERAL:
+      return UNIVERSAL_ONE_BINDING;
+    case AND:
+    case OR: {
+      FormulaList::Iterator it(formula->args());
+      Fragment classification;
+      if (it.hasNext()) {
+        auto subformula = it.next();
+        classification = classify(subformula);
+        if (!it.hasNext() || classification == NONE)
+          return classification;
+      }
+      while (it.hasNext()) {
+        auto subformula = it.next();
+        classification = BindingClassification::compare(classification, classify(subformula));
+        if (classification == NONE)
+          return classification;
+      }
+      return classification;
+    }
+    case NOT: {
+      auto subformula = formula->uarg();
+      if (subformula->connective() == LITERAL)
+        return UNIVERSAL_ONE_BINDING;
+      else
+        return NONE;
+    }
+    case FORALL:
+    case EXISTS: {
+      Formula *subformula = formula;
+      Connective connective;
+      bool canBeUniversal = (subformula->connective() == Connective::FORALL);
+      do {
+        subformula = subformula->qarg();
+        connective = subformula->connective();
+        if(connective == Connective::EXISTS) canBeUniversal = false;
+      } while (connective == Connective::FORALL || connective == Connective::EXISTS);
+
+      auto classification = _classifyHelper(subformula).fragment;
+      if(!canBeUniversal && classification == UNIVERSAL_ONE_BINDING)
+        classification = ONE_BINDING;
+      return classification;
+    }
+    case BOOL_TERM:
+    case FALSE:
+    case TRUE:
+      return UNIVERSAL_ONE_BINDING;
+    default:
+      return NONE;
+  }
+}
+
+BindingClassification BindingClassifier::_classifyHelper(Formula* formula){
+  switch (formula->connective()) {
+    case LITERAL:
+      return {UNIVERSAL_ONE_BINDING, formula->literal()->termArgs()};
+    case AND:
+    case OR:{
+      FormulaList::Iterator it(formula->args());
+      BindingClassification classification;
+      if (it.hasNext()) {
+        auto subformula = it.next();
+        classification = _classifyHelper(subformula);
+        if (!it.hasNext())
+          return classification;
+      }
+      while (it.hasNext()) {
+        auto subformula = it.next();
+        classification = BindingClassification::compare(classification, _classifyHelper(subformula), formula->connective());
+        if (classification.is(NONE))
+          return classification;
+      }
+      return classification;
+    }
+    case NOT: {
+      auto subformula = formula->uarg();
+      if (subformula->connective() == LITERAL)
+        return {UNIVERSAL_ONE_BINDING, subformula->literal()->termArgs()};
+      else
+        return {NONE, nullptr};
+    }
+    case BOOL_TERM:
+    case FALSE:
+    case TRUE:
+      return {UNIVERSAL_ONE_BINDING, nullptr};
+    default:
+      return {NONE, nullptr};
+  }
 }
 
 
@@ -29,7 +135,7 @@ bool BindingClassifier::_isFragment(Kernel::Formula *formula, BindingFragments::
     case OR: {
       FormulaList::Iterator it(formula->args());
       while (it.hasNext()) {
-        if (!isOneBinding(it.next()))
+        if (!_isFragment(it.next(), fragment))
           return false;
       }
       return true;
@@ -42,7 +148,8 @@ bool BindingClassifier::_isFragment(Kernel::Formula *formula, BindingFragments::
     case FORALL:
     case EXISTS: {
       Formula *subformula = formula;
-      Connective connective;
+      Connective connective = formula->connective();
+      if(fragment == UNIVERSAL_ONE_BINDING && connective == Connective::EXISTS) return false;
       do {
         subformula = subformula->qarg();
         connective = subformula->connective();
@@ -51,9 +158,9 @@ bool BindingClassifier::_isFragment(Kernel::Formula *formula, BindingFragments::
       auto term = _findATerm(subformula);
       if(term == nullptr) return false;
       switch (fragment) {
+        case UNIVERSAL_ONE_BINDING:
         case ONE_BINDING:
           return _isOneBindingHelper(subformula, term);
-        case UNIVERSAL_ONE_BINDING:
         case CONJUNCTIVE_BINDING:
           return _isConjunctiveBindingHelper(subformula, term);
         case DISJUNCTIVE_BINDING:
@@ -79,10 +186,6 @@ bool BindingClassifier::_isOneBindingHelper(Formula *formula, TermList *term){
         }
         return true;
     }
-    case IMP:
-    case IFF:
-    case XOR:
-        return _isOneBindingHelper(formula->left(), term) && _isOneBindingHelper(formula->right(), term);
     case NOT:
       return _isOneBindingHelper(formula->uarg(), term);
     default:
@@ -94,7 +197,6 @@ bool BindingClassifier::_isFragment(UnitList* units, Fragment fragment){
   UnitList::Iterator it(units);
   while (it.hasNext()){
     auto formula = it.next()->getFormula();
-    formula = (it.hasNext())? formula : formula->uarg(); // Se è la congettura rimuove la negazione // TODO da fare in altro modo
 
     bool res;
     switch(fragment){
@@ -126,10 +228,6 @@ TermList* BindingClassifier::_findATerm(Formula* formula){
     case AND:
     case OR:
       return _findATerm(formula->args()->head());
-    case IFF:
-    case XOR:
-    case IMP:
-      return _findATerm(formula->left());
     case NOT:
       return _findATerm(formula->uarg());
     default:
@@ -156,10 +254,6 @@ bool BindingClassifier::_isConjunctiveBindingHelper(Formula *formula, TermList *
       }
       return true;
     }
-    case IMP:
-    case IFF:
-    case XOR:
-      return _isOneBindingHelper(formula->left(), term) && _isOneBindingHelper(formula->right(), term);
     case NOT:
       return _isOneBindingHelper(formula->uarg(), term);
     default:
@@ -186,13 +280,42 @@ bool BindingClassifier::_isDisjunctiveBindingHelper(Formula *formula, TermList *
       }
       return true;
     }
-    case IMP:
-    case IFF:
-    case XOR:
-      return _isOneBindingHelper(formula->left(), term) && _isOneBindingHelper(formula->right(), term);
     case NOT:
       return _isOneBindingHelper(formula->uarg(), term);
     default:
       return false;
   }
+}
+
+BindingClassification::BindingClassification(): fragment(NONE), term(nullptr){}
+BindingClassification::BindingClassification(Fragment fragment, TermList *term) : fragment(fragment), term(term) {}
+
+
+Fragment BindingClassification::compare(const Fragment &first, const Fragment &second){
+  if(first == CONJUNCTIVE_BINDING && second == DISJUNCTIVE_BINDING) return NONE;
+  if(first == DISJUNCTIVE_BINDING && second == CONJUNCTIVE_BINDING) return NONE;
+
+  if(first > second) return first;
+  else return second;
+}
+BindingClassification BindingClassification::compare(const BindingClassification &first, const BindingClassification &second, Connective connective){
+  if(first.is(ONE_BINDING) && second.is(ONE_BINDING)){
+    if(first.term == nullptr || second.term == nullptr) return {(first.fragment <= second.fragment)? second.fragment: first.fragment, nullptr};
+    if(TermList::equals(*first.term, *second.term))
+      if(first.fragment <= second.fragment) return second; // If one is UNIVERSAL_ONE_BINDING
+      else return first;
+    else{
+      if(connective == Connective::AND)
+        return {Fragment::CONJUNCTIVE_BINDING, nullptr};
+      else if(connective == Connective::OR)
+        return {Fragment::DISJUNCTIVE_BINDING, nullptr};
+    }
+  } // return ONE_BINDING or UNIVERSAL_ONE_BINDING
+  else if(first.fragment == second.fragment) return first; // return DISJUNCTIVE or CONJUNCTIVE
+  else if(first.is(ONE_BINDING) && second.is(CONJUNCTIVE_BINDING) && connective == AND) return second; // return CONJUNCTIVE
+  else if(first.is(ONE_BINDING) && second.is(DISJUNCTIVE_BINDING) && connective == OR) return second; // return DISJUNCTIVE
+  else if(second.is(ONE_BINDING) && first.is(CONJUNCTIVE_BINDING) && connective == AND) return first; // return CONJUNCTIVE
+  else if(second.is(ONE_BINDING) && first.is(DISJUNCTIVE_BINDING) && connective == OR) return first; // return DISJUNCTIVE
+
+  return {NONE, nullptr};
 }

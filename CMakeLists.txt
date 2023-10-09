@@ -775,6 +775,8 @@ set(VAMPIRE_SOURCES
         BindingFragments/OneBindingSat.h
         BindingFragments/BindingClassifier.cpp
         BindingFragments/BindingClassifier.h
+        BindingFragments/Preprocess.cpp
+        BindingFragments/Preprocess.h
 )
 
 ################################################################

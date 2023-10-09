@@ -59,6 +59,7 @@
 #include "Saturation/SaturationAlgorithm.hpp"
 
 #include "BindingFragments/ProvingHelper.h"
+#include "BindingFragments/Preprocess.h"
 
 #include "FMB/ModelCheck.hpp"
 
@@ -145,12 +146,7 @@ Problem* getPreprocessedProblemForBindingFragments(){
   // this will provide warning if options don't make sense for problem
   env.options->checkProblemOptionConstraints(prb->getProperty(), /*before_preprocessing = */ true);
 
-  Shell::Preprocess prepro(*env.options);
-  prepro.turnClausifierOff();
-  prepro.keepSimplifyStep();
-
-  //phases for preprocessing are being set inside the preprocess method
-  prepro.preprocess(*prb);
+  BindingFragments::Preprocess::preprocess(*prb);
 
   return prb;
 } // getPreprocessedProblem for binding fragments mode
@@ -201,10 +197,9 @@ Problem *doProving()
   return prb;
 }
 VWARN_UNUSED
-Problem *do1BProving()
-{
-//  Problem *prb = getPreprocessedProblem();
-  Problem* prb = UIHelper::getInputProblem(*env.options);
+Problem *do1BProving(){
+  Problem *prb = getPreprocessedProblemForBindingFragments();
+
   BindingFragments::ProvingHelper::run1BSatAlgorithm(*prb, *env.options);
   return prb;
 }
