@@ -4,12 +4,14 @@
 
 #include "BindingClassifier.h"
 #include "Kernel/Formula.hpp"
+#include "Kernel/Clause.hpp"
 
 #include <iostream>
 
 using namespace std;
 using namespace Kernel;
 using namespace BindingFragments;
+
 
 Fragment BindingClassifier::classify(UnitList* units){
   UnitList::Iterator it(units);
@@ -39,7 +41,7 @@ Fragment BindingClassifier::classify(Formula* formula){
     case AND:
     case OR: {
       FormulaList::Iterator it(formula->args());
-      Fragment classification;
+      Fragment classification = NONE;
       if (it.hasNext()) {
         auto subformula = it.next();
         classification = classify(subformula);

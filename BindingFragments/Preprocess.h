@@ -12,7 +12,11 @@ using namespace Kernel;
 namespace BindingFragments {
 class Preprocess {
 public:
-  static void preprocess(Problem& prb);
+  explicit Preprocess(bool clausify = false): _clausify(clausify) {};
+  void preprocess(Problem& prb);
+  void clausify(Problem& prb);
+private:
+  bool _clausify;
 };
 }
 

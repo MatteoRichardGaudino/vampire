@@ -146,7 +146,8 @@ Problem* getPreprocessedProblemForBindingFragments(){
   // this will provide warning if options don't make sense for problem
   env.options->checkProblemOptionConstraints(prb->getProperty(), /*before_preprocessing = */ true);
 
-  BindingFragments::Preprocess::preprocess(*prb);
+  BindingFragments::Preprocess prepro(true);
+  prepro.preprocess(*prb);
 
   return prb;
 } // getPreprocessedProblem for binding fragments mode
