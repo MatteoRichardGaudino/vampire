@@ -33,14 +33,14 @@ public:
   : _subst(subst), _queryBank(queryBank), _resultBank(resultBank) {}
 
   TermList applyToQuery(TermList t) override
-  { return _subst->apply(t,_queryBank); }
+  {return _subst->apply(t,_queryBank); }
   Literal* applyToQuery(Literal* l) override
-  { return _subst->apply(l,_queryBank); }
+  {return _subst->apply(l,_queryBank); }
 
   TermList applyToResult(TermList t) override
   { return _subst->apply(t,_resultBank); }
   Literal* applyToResult(Literal* l) override
-  { return _subst->apply(l,_resultBank); }
+  {return _subst->apply(l,_resultBank); }
 
   TermList applyTo(TermList t,unsigned index) override
   { return _subst->apply(t,index); }

@@ -3,10 +3,11 @@
 //
 
 #include "ProvingHelper.h"
-#include "Kernel/Clause.hpp"
 #include "Indexing/Index.hpp"
 #include "Indexing/LiteralSubstitutionTree.hpp"
 #include "BindingClassifier.h"
+#include "Kernel/RobSubstitution.hpp"
+#include "OneBindingSat.h"
 
 #include <iostream>
 
@@ -15,6 +16,10 @@ using namespace Kernel;
 using namespace Indexing;
 
 void BindingFragments::ProvingHelper::run1BSatAlgorithm(Problem &prb, const Options &opt){
+  OneBindingSat sat(prb, opt);
+  sat.solve();
+
+  return;
   auto list = prb.units();
 
   LiteralSubstitutionTree is;
@@ -28,7 +33,7 @@ void BindingFragments::ProvingHelper::run1BSatAlgorithm(Problem &prb, const Opti
 
     auto clause = unit->asClause();
     auto literals = clause->literals();
-    for(int j = 0; j < clause->length(); j++){
+    for(unsigned int j = 0; j < clause->length(); j++){
       is.insert(literals[j], clause);
     }
   }
@@ -41,34 +46,33 @@ void BindingFragments::ProvingHelper::run1BSatAlgorithm(Problem &prb, const Opti
 
     auto clause = unit->asClause();
     auto literals = clause->literals();
-    for(int j = 0; j < clause->length(); j++){
-      cout<< "Query on: " << literals[j]->toString() << endl;
-      cout<< "\tgetUnifications: " << endl;
+    for(unsigned int j = 0; j < clause->length(); j++){
+      cout<< "GetUnifications on: " << literals[j]->toString() << endl;
       auto resultIt = is.getUnifications(literals[j], false, true);
+
+      RobSubstitution rSub;
 
       int r = 0;
       while(resultIt.hasNext()){
         auto result = resultIt.next();
         cout<< "\t\tRes " << ++r<< ":" << result.literal->toString() << " Clause: " << result.clause->number() << endl;
         auto s = result.substitution;
+        cout << "\t"; s->output(cout); cout << endl;
 
-        auto l = s->applyTo(result.literal, 1);
-//        arr[arr_i++] = *l;
-        s->output(cout);
-        cout << endl;
-        cout<< "\t\t Sostituzione1: " << l->toString() << endl;
-        auto l2 = s->applyTo(literals[j], 0);
-        cout<< "\t\t Sostituzione2: " << l2->toString() << endl;
+//        cout<< "\t\t[00] " << s->applyTo(literals[j], 0)->toString() << " =? " << s->applyTo(result.literal, 0)->toString()
+//             << " unify? " << rSub.unify(*literals[j]->termArgs(), 0, *result.literal->termArgs(), 0) << endl;
+//        cout<< "\t\t[01] " << s->applyTo(literals[j], 0)->toString() << " =? " << s->applyTo(result.literal, 1)->toString()
+//             << " unify? " << rSub.unify(*literals[j]->termArgs(), 0, *result.literal->termArgs(), 1) << endl;
+//        cout<< "\t\t[10] " << s->applyTo(literals[j], 1)->toString() << " =? " << s->applyTo(result.literal, 0)->toString()
+//             << " unify? " << rSub.unify(*literals[j]->termArgs(), 1, *result.literal->termArgs(), 0) << endl;
+//        cout<< "\t\t[11] " << s->applyTo(literals[j], 1)->toString() << " =? " << s->applyTo(result.literal, 1)->toString()
+//             << " unify? " << rSub.unify(*literals[j]->termArgs(), 1, *result.literal->termArgs(), 1) << endl;
+//        cout<< "\t\t[22] " << s->applyTo(literals[j], 2)->toString() << " =? " << s->applyTo(result.literal, 2)->toString()
+//             << " unify? " << rSub.unify(*literals[j]->termArgs(), 2, *result.literal->termArgs(), 2) << endl;
+//        cout<< "\t\t[33] " << s->applyTo(literals[j], 3)->toString() << " =? " << s->applyTo(result.literal, 3)->toString()
+//             << " unify? " << rSub.unify(*literals[j]->termArgs(), 3, *result.literal->termArgs(), 3) << endl;
       }
 
-      cout<< "\tgetGeneralizations: " << endl;
-      resultIt = is.getGeneralizations(literals[j], false, false);
-      r = 0;
-      while(resultIt.hasNext()){
-        auto result = resultIt.next();
-        cout<< "\t\tRes " << ++r<< ":" << result.literal->toString() << " Clause: " << result.clause->number() << endl;
-      }
-      cout<< endl;
     }
   }
 

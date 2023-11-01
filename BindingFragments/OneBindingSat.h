@@ -19,10 +19,22 @@ namespace BindingFragments{
       bool solve();
 
     private:
-      SATSolverWithAssumptions* _solver;
+      PrimitiveProofRecordingSATSolver* _solver;
       SAT2FO _sat2fo;
       Problem& _problem;
       const Options& _options;
+
+      ClauseStack* _satClauses;
+      unsigned _bindingCount = 0;
+      unsigned _satVarCount = 0;
+
+
+      Formula* generateSatFormula(Formula* formula);
+      void generateSATClauses(Unit* unit);
+
+      void setupSolver();
+      void printAssignment();
+      void blockModel();
   };
 }
 #endif // VAMPIRE_ONEBINDINGSAT_H

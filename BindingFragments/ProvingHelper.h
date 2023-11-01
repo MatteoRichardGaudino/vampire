@@ -18,5 +18,6 @@ public:
 };
 }
 
+// https://theory.stanford.edu/~nikolaj/programmingz3.html#sec-blocking-evaluations
 
 #endif // VAMPIRE_PROVINGHELPER_H

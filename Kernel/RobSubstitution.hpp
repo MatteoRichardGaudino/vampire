@@ -250,6 +250,7 @@ private:
 
   VarSpec getVarSpec(TermList tl, int index) const
   {
+
     ASS(tl.isVar());
     index = tl.isSpecialVar() ? SPECIAL_INDEX : index;
     return VarSpec(tl.var(), index);
