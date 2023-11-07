@@ -157,7 +157,7 @@ bool BindingClassifier::_isFragment(Kernel::Formula *formula, BindingFragments::
         connective = subformula->connective();
         if(fragment == UNIVERSAL_ONE_BINDING && connective == Connective::EXISTS) return false;
       } while (connective == Connective::FORALL || connective == Connective::EXISTS);
-      auto term = _findATerm(subformula);
+      auto term = getBindingTerm(subformula);
       if(term == nullptr) return false;
       switch (fragment) {
         case UNIVERSAL_ONE_BINDING:
@@ -223,19 +223,24 @@ bool BindingClassifier::_isFragment(UnitList* units, Fragment fragment){
   return true;
 }
 
-TermList* BindingClassifier::_findATerm(Formula* formula){
+TermList* BindingClassifier::getBindingTerm(Formula* formula){
+  return mostLeftLiteral(formula)->termArgs();
+}
+
+Literal* BindingClassifier::mostLeftLiteral(Formula* formula){
   switch (formula->connective()){
     case LITERAL:
-      return formula->literal()->termArgs();
+      return formula->literal();
     case AND:
     case OR:
-      return _findATerm(formula->args()->head());
+      return mostLeftLiteral(formula->args()->head());
     case NOT:
-      return _findATerm(formula->uarg());
+      return mostLeftLiteral(formula->uarg());
     default:
       return nullptr;
   }
 }
+
 bool BindingClassifier::_isConjunctiveBindingHelper(Formula *formula, TermList *term){
   switch (formula->connective()) {
     case LITERAL:

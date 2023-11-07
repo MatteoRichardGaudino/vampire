@@ -164,6 +164,8 @@ void SubstitutionTree::insert(BindingMap& svBindings, LeafData ld)
 start:
 
 #if REORDERING
+  //std::cout<< "!(*pnode)->isLeaf(): "<< !(*pnode)->isLeaf() << " ---- !unresolvedSplits.isEmpty(): " << !unresolvedSplits.isEmpty()<< endl;
+ // cout<< (*pnode)->term.toString() << endl;
   ASS(!(*pnode)->isLeaf() || !unresolvedSplits.isEmpty());
   bool canPostponeSplits=false;
   if((*pnode)->isLeaf() || (*pnode)->algorithm()!=UNSORTED_LIST) {

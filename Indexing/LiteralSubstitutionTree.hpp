@@ -64,7 +64,7 @@ public:
   virtual void markTagged() override { }
 #endif
 
-private:
+//private:
   SubstitutionTree& getTree(Literal* lit, bool complementary);
 
   template<class Iterator>

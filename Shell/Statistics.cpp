@@ -546,6 +546,9 @@ const char* Statistics::phaseToString(ExecutionPhase p)
           return "Finite model building constraint generation";
   case FMB_SOLVING:
           return "Finite model building SAT solving";
+
+  case CLASSIFY:
+          return "Fragment classification";
   default:
     ASSERTION_VIOLATION;
     return "Invalid ExecutionPhase value";

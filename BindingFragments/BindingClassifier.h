@@ -21,6 +21,21 @@ enum Fragment{
   NONE = 4
 };
 
+inline vstring fragmentToString(Fragment fragment){
+    switch (fragment) {
+    case UNIVERSAL_ONE_BINDING:
+    return "Universal One Binding";
+    case ONE_BINDING:
+    return "One Binding";
+    case CONJUNCTIVE_BINDING:
+    return "Conjunctive Binding";
+    case DISJUNCTIVE_BINDING:
+    return "Disjunctive Binding";
+    case NONE:
+    return "None";
+    }
+}
+
 class BindingClassification{
 public:
   Fragment fragment;
@@ -70,6 +85,9 @@ public:
 
   static Fragment classify(UnitList* units);
   static Fragment classify(Formula* formula);
+
+  static TermList* getBindingTerm(Formula* formula);
+  static Literal* mostLeftLiteral(Formula* formula);
 private:
   static bool _isFragment(UnitList* units, Fragment fragment);
   static bool _isFragment(Formula* formula, Fragment fragment);
@@ -77,7 +95,6 @@ private:
   static bool _isOneBindingHelper(Formula* formula, TermList *term);
   static bool _isConjunctiveBindingHelper(Formula* formula, TermList *term);
   static bool _isDisjunctiveBindingHelper(Formula* formula, TermList *term);
-  static TermList* _findATerm(Formula* formula);
 
   static BindingClassification _classifyHelper(Formula* formula);
 };

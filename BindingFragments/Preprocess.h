@@ -12,10 +12,11 @@ using namespace Kernel;
 namespace BindingFragments {
 class Preprocess {
 public:
-  explicit Preprocess(bool clausify = false): _clausify(clausify) {};
+  explicit Preprocess(bool skolemize = true, bool clausify = false):_skolemize(skolemize), _clausify(clausify) {};
   void preprocess(Problem& prb);
   void clausify(Problem& prb);
 private:
+  bool _skolemize;
   bool _clausify;
 };
 }

@@ -16,18 +16,18 @@
 
 
 void BindingFragments::Preprocess::preprocess(Problem &prb){
-  // ---- Remove the negation from the conjecture and NNF ----
+  env.statistics->phase = Statistics::NORMALIZATION;
   UnitList::DelIterator uit(prb.units());
   while (uit.hasNext()){
     auto unit = uit.next();
-    ASS(!unit->isClause())
-    auto inf = unit->inference();
-
-    if(inf.rule() == InferenceRule::NEGATED_CONJECTURE){ // if is conjecture remove negationI
-      auto conjecture = new FormulaUnit(unit->getFormula()->uarg(), FromInput(UnitInputType::CONJECTURE));
-      uit.replace(conjecture);
-      unit = conjecture;
-    }
+    if(unit->isClause()) continue;
+//    auto inf = unit->inference();
+//
+//    if(inf.rule() == InferenceRule::NEGATED_CONJECTURE){ // if is conjecture remove negationI
+//      auto conjecture = new FormulaUnit(unit->getFormula()->uarg(), FromInput(UnitInputType::CONJECTURE));
+//      uit.replace(conjecture);
+//      unit = conjecture;
+//    }
 
     FormulaUnit* fu = static_cast<FormulaUnit*>(unit);
     FormulaUnit* fu0 = fu;
@@ -38,16 +38,19 @@ void BindingFragments::Preprocess::preprocess(Problem &prb){
         uit.replace(fu);
     }
 
-    if(!_clausify) continue;
-    fu0 = fu;
-    fu = Skolem::skolemise(fu, false);
-    if(fu != fu0){
-        uit.replace(fu);
+    if(_skolemize || _clausify) {
+        fu0 = fu;
+        fu = Skolem::skolemise(fu, false);
+        if(fu != fu0){
+          uit.replace(fu);
+        }
     }
   }
 
-  if(_clausify)
+  if(_clausify) {
+    env.statistics->phase = Statistics::CLAUSIFICATION;
     clausify(prb);
+  }
 }
 
 void BindingFragments::Preprocess::clausify(Problem& prb){

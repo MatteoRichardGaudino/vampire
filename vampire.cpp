@@ -60,6 +60,7 @@
 
 #include "BindingFragments/ProvingHelper.h"
 #include "BindingFragments/Preprocess.h"
+#include "BindingFragments/BindingClassifier.h"
 
 #include "FMB/ModelCheck.hpp"
 
@@ -201,7 +202,23 @@ VWARN_UNUSED
 Problem *do1BProving(){
   Problem *prb = getPreprocessedProblemForBindingFragments();
 
-  BindingFragments::ProvingHelper::run1BSatAlgorithm(*prb, *env.options);
+  env.statistics->phase = Statistics::CLASSIFY;
+  auto classification = BindingFragments::BindingClassifier::classify(prb->units());
+
+  switch (classification) {
+    case BindingFragments::UNIVERSAL_ONE_BINDING:
+    case BindingFragments::ONE_BINDING:
+    case BindingFragments::CONJUNCTIVE_BINDING:
+      BindingFragments::ProvingHelper::run1BSatAlgorithm(*prb, *env.options, classification);
+      break;
+    case BindingFragments::DISJUNCTIVE_BINDING:
+    case BindingFragments::NONE:
+      cout<< "Can't solve this fragment: " << BindingFragments::fragmentToString(classification) << endl;
+      env.statistics->terminationReason = Statistics::INAPPROPRIATE;
+      env.statistics->refutation = 0;
+      break;
+  }
+
   return prb;
 }
 

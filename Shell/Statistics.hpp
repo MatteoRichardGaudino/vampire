@@ -366,7 +366,9 @@ public:
     FMB_PREPROCESSING,
     FMB_CONSTRAINT_GEN,
     FMB_SOLVING,
-    UNKNOWN_PHASE
+    UNKNOWN_PHASE,
+    /** Fragments */
+    CLASSIFY
   };
 
   ExecutionPhase phase;
