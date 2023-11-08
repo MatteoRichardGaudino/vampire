@@ -19,27 +19,6 @@ using namespace Indexing;
 
 
 BindingFragments::OneBindingSat::OneBindingSat(Problem &prb, const Options &opt) : _problem(prb), _options(opt) {
-  switch(opt.satSolver()){
-    case Options::SatSolver::MINISAT:
-      _solver = new MinisatInterfacing(opt, true);
-      break;
-#if VZ3 // TODO
-    case Options::SatSolver::Z3:
-    { BYPASSING_ALLOCATOR
-      _solverIsSMT = true;
-      _solver = new Z3Interfacing(_parent.getOptions(),_parent.satNaming(), /* unsat core */ false, _parent.getOptions().exportAvatarProblem());
-      if(_parent.getOptions().satFallbackForSMT()){
-        // TODO make fallback minimizing?
-        SATSolver* fallback = new MinisatInterfacing(_parent.getOptions(),true);
-        _solver = new FallbackSolverWrapper(_solver.release(),fallback);
-      }
-    }
-    break;
-#endif
-    default:
-      ASSERTION_VIOLATION_REP(opt.satSolver());
-  }
-
 
   _satClauses = new ClauseStack(16);
   _satLiterals = LiteralList::empty();
@@ -64,15 +43,19 @@ BindingFragments::OneBindingSat::OneBindingSat(Problem &prb, const Options &opt)
     cout << "Clause " << ++i << ": "<< cIt1.next()->toString() << endl;
   }
 
+  cout<< "------------------------ Bindings ------------------------------" << endl;
+  _printBindings();
+
   cout<< "------------------ Setup Sat solver ----------------------------" << endl;
   setupSolver();
-  cout<< "----------------------------------------------" << endl;
 }
 
 bool BindingFragments::OneBindingSat::solve(){
   cout<< "-------------------- Solve --------------------------" << endl;
   while (_solver->solve() == SAT::SATSolver::SATISFIABLE){
     printAssignment();
+
+    bool RESULT = true;
 
     Array<Literal*> implicants;
     int l = 0;
@@ -100,27 +83,47 @@ bool BindingFragments::OneBindingSat::solve(){
 //    cout<< "------ Building substitution trees by arity groups ------------------" << endl;
     ArityGroupIterator groupIt(implicants, l);
 
-    while (groupIt.hasNext()){
+    while (RESULT && groupIt.hasNext()){
       auto group = groupIt.next();
-      auto tree = _buildSubstitutionTree(implicants, group);
-//      cout<< "Substitution tree for arity " << groupIt.arity() << endl;
-//      cout<< multiline(tree) << endl;
-
-      MaximalUnifiableSubsets mus(group, tree);
+      MaximalUnifiableSubsets mus(group, [&](auto map){
+        auto solver = _newSatSolver();
+        solver->ensureVarCount(_maxBindingVarNo);
+        cout<< "MUS: ";
+        for(auto & _ : map){
+          if(_.second > 0){
+            cout<< _.first->toString() << " ";
+            SATClauseStack* stk = _bindings[_.first];
+            SATClauseStack::Iterator it(*stk);
+            while (it.hasNext()) solver->addClause(it.next());
+          }
+        }
+        auto status = solver->solve();
+        cout<< "::::: " << status << endl;
+        delete solver;
+        return status == SATSolver::SATISFIABLE;
+      });
 
       while (group.hasNext()){
         auto lit = group.next();
         cout<< " -------------------- Maximal unifiable subsets for " << lit->toString() << " ------------------" << endl;
-        mus.mus(lit);
-        cout<< " ------------------------------------------------------------------" << endl;
+        bool res = mus.mus(lit);
+        if(!res){
+          RESULT = false;
+          break;
+        }
       }
     }
 
-    cout<< "------ blocking model  -----------------------" << endl;
+    if(RESULT){
+      cout<<  "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& SAT &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
+      return true;
+    }
+
+    cout<< "||||||||||||||||||||||||||||||||| blocking model |||||||||||||||||||||||||||||||||" << endl;
     blockModel();
   }
 
-  cout<< "----------------------------------------------" << endl;
+  cout<<  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ UNSAT ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
   return false;
 }
 
@@ -129,16 +132,18 @@ void BindingFragments::OneBindingSat::generateSATClauses(Unit* unit){
   auto satFormula = generateSatFormula(unit->getFormula());
   Unit* satUnit = new FormulaUnit(satFormula, unit->inference());
 
-  cout<< "Unit: " << unit->toString() << endl;
-  cout<< "SAT Unit: " << satUnit->toString() << endl << endl;
+//  cout<< "Unit: " << unit->toString() << endl;
+//  cout<< "SAT Unit: " << satUnit->toString() << endl << endl;
   CNF cnf;
   cnf.clausify(satUnit, *_satClauses);
 }
 
 Formula *BindingFragments::OneBindingSat::generateSatFormula(Formula *formula){
   switch (formula->connective()) {
-    case LITERAL:
+    case LITERAL: {
+      _addBinding(formula->literal());
       return new AtomicFormula(formula->literal());
+    }
     case AND:
     case OR: {
       FormulaList *args = FormulaList::empty();
@@ -157,7 +162,6 @@ Formula *BindingFragments::OneBindingSat::generateSatFormula(Formula *formula){
         formula = formula->qarg();
       }
       auto mll = BindingClassifier::mostLeftLiteral(formula);
-      cout<< "Most left literal: " << mll->toString() << endl;
       auto arg = mll->args();
       auto arity = mll->arity();
       DArray<TermList> term(arity);
@@ -167,10 +171,10 @@ Formula *BindingFragments::OneBindingSat::generateSatFormula(Formula *formula){
       }
 
       unsigned freshPredicate = env.signature->addFreshPredicate(arity, "$b");
-      //vstring name =  reinterpret_cast<basic_string<char, std::char_traits<char>, Lib::STLAllocator<char>> &&>(to_string(_bindingCount++).append("_Binding"));
-      //return new NamedFormula(name);
-      //Literal lit(freshFunctor, size, false, false);
       auto newLit = Literal::create(freshPredicate, arity, true, false, term.array());
+
+      _addBinding(newLit, formula);
+
       return new AtomicFormula(newLit);
     }
     default:
@@ -178,13 +182,19 @@ Formula *BindingFragments::OneBindingSat::generateSatFormula(Formula *formula){
   }
 }
 void BindingFragments::OneBindingSat::setupSolver(){
+  _solver = _newSatSolver();
   ClauseStack::Iterator cIt(*_satClauses);
   SATClauseStack clauses;
+  int i = 0;
   while (cIt.hasNext()){
     auto clause = cIt.next();
     auto satClause = _sat2fo.toSAT(clause);
-    cout<< "Clause: " << clause->toString() << endl;
-    cout<< "SAT Clause: " << satClause->toString() << endl << endl;
+    if(satClause == nullptr){
+      cout<< "Skipping: " << clause->toString() << endl;
+      continue;
+    }
+//    cout<< "Clause: " << clause->toString() << endl;
+    cout<< "SATClause " << ++i << ": " << satClause->toString() << endl;
     clauses.push(satClause);
   }
 
@@ -221,15 +231,6 @@ void BindingFragments::OneBindingSat::blockModel(){ // TODO non va bene cosi
   _solver->addClause(clause);
 }
 
-Indexing::SubstitutionTree BindingFragments::OneBindingSat::_buildSubstitutionTree(const Array<Literal*>& literals, ArityGroupIterator::GroupIterator& group){
-  SubstitutionTree tree(false, false);
-  while (group.hasNext()){
-    auto lit = group.next();
-    tree.handle(lit, SubstitutionTree::LeafData(nullptr, lit), true);
-  }
-  group.reset();
-  return tree;
-}
 
 BindingFragments::ArityGroupIterator::GroupIterator BindingFragments::ArityGroupIterator::next(){
   _start = _end;
@@ -246,22 +247,24 @@ BindingFragments::ArityGroupIterator::GroupIterator BindingFragments::ArityGroup
 
 
 BindingFragments::MaximalUnifiableSubsets::MaximalUnifiableSubsets(
-    ArityGroupIterator::GroupIterator &group, Indexing::SubstitutionTree &tree):
-          _group(group), _tree(tree){
-}
-void BindingFragments::MaximalUnifiableSubsets::mus(Literal *literal){
+    ArityGroupIterator::GroupIterator group, std::function<bool(std::map<Literal*, int>)> fun):
+          _group(group), _tree(false, false), _fun(fun){
+
+  _buildTree();
+
   while (_group.hasNext()){
-      auto lit = _group.next();
-      if(_s[lit] != -1)
-        _s[lit] = 0;
+    auto lit = _group.next();
+    _s[lit] = 0;
   }
   _group.reset();
-
-  _s[literal] = 1;
-  _mus(literal, 2);
-  _s[literal] = -1;
 }
-void BindingFragments::MaximalUnifiableSubsets::_mus(Literal *literal, int depth){
+bool BindingFragments::MaximalUnifiableSubsets::mus(Literal *literal){
+  _s[literal] = 1;
+  bool res = _mus(literal, 2);
+  _s[literal] = -1;
+  return res;
+}
+bool BindingFragments::MaximalUnifiableSubsets::_mus(Literal *literal, int depth){
   bool isMax = true;
   auto uIt = _tree.iterator<SubstitutionTree::UnificationsIterator>(literal, true, false);
 
@@ -270,28 +273,103 @@ void BindingFragments::MaximalUnifiableSubsets::_mus(Literal *literal, int depth
       auto u = res.data->literal;
       if(_s[u] == 0){
         _s[u] = depth;
-        cout<< "push: " << u->toString() << endl;
+        //cout<< "push: " << u->toString() << endl;
         isMax = false;
-        _mus(res.subst->applyToQuery(literal), depth+1);
+        if(!_mus(res.subst->applyToQuery(literal), depth+1)) return false;
         _s[u] = -depth;
-        cout<< "pop&block: " << u->toString() << endl;
+        //cout<< "pop&block: " << u->toString() << endl;
       }
   }
 
   if(isMax){
-    cout<< "Maximal unifiable subset: ";
-    for(auto & _ : _s){
-      if(_.second > 0){
-        cout<< _.first->toString() << " ";
+      if(!_fun(_s)){
+        return false;
       }
-    }
-    cout<< endl;
   }
 
   for(auto & _ : _s){
-    if(_.second == -depth){
-      _s[_.first] = 0;
-      cout<< "Unblock: " << _.first->toString() << endl;
-    }
+      if(_.second == -depth){
+        _s[_.first] = 0;
+  //      cout<< "Unblock: " << _.first->toString() << endl;
+      }
   }
+  return true;
+}
+void BindingFragments::MaximalUnifiableSubsets::_buildTree(){
+  while (_group.hasNext()){
+    auto lit = _group.next();
+    _tree.handle(lit, SubstitutionTree::LeafData(nullptr, lit), true);
+  }
+  _group.reset();
+}
+
+
+void BindingFragments::OneBindingSat::_addBinding(Literal *literal){
+  if (_bindings.find(literal) != _bindings.end()) return;
+
+  auto clause = new (1) SATClause(1);
+  (*clause)[0] = SATLiteral(literal->functor(), literal->polarity());
+  auto stk = new SATClauseStack(1);
+  stk->push(clause);
+
+  _bindings[literal] = stk;
+  if(literal->functor() > _maxBindingVarNo) _maxBindingVarNo = literal->functor();
+}
+
+void BindingFragments::OneBindingSat::_addBinding(Literal* literal, Formula *formula){
+  // TODO magari andrebbe messa una regola non scelta a caso
+  FormulaUnit unit(formula, Inference(FromInput(UnitInputType::AXIOM)));
+  ClauseStack stk;
+  CNF cnf;
+  cnf.clausify(&unit, stk);
+  auto satStk = new SATClauseStack(stk.size());
+
+  ClauseStack::Iterator it(stk);
+  while (it.hasNext()){
+    auto clause = it.next();
+    unsigned int size = clause->size();
+    auto satClause = new(clause->size()) SATClause(clause->size());
+
+    for(unsigned int i = 0; i < size; i++){
+      auto lit = (*clause)[i];
+      (*satClause)[i] = SATLiteral(lit->functor(), lit->polarity());
+      if(literal->functor() > _maxBindingVarNo) _maxBindingVarNo = literal->functor();
+    }
+    satStk->push(satClause);
+  }
+  _bindings[literal] = satStk;
+}
+
+
+PrimitiveProofRecordingSATSolver *BindingFragments::OneBindingSat::_newSatSolver(){
+  switch(_options.satSolver()){
+    case Options::SatSolver::MINISAT:
+      return new MinisatInterfacing(_options, true);
+      break;
+#if VZ3 // TODO
+    case Options::SatSolver::Z3:
+    { BYPASSING_ALLOCATOR
+      _solverIsSMT = true;
+      _solver = new Z3Interfacing(_parent.getOptions(),_parent.satNaming(), /* unsat core */ false, _parent.getOptions().exportAvatarProblem());
+      if(_parent.getOptions().satFallbackForSMT()){
+        // TODO make fallback minimizing?
+        SATSolver* fallback = new MinisatInterfacing(_parent.getOptions(),true);
+        return = new FallbackSolverWrapper(_solver.release(),fallback);
+      }
+    }
+    break;
+#endif
+    default:
+      ASSERTION_VIOLATION_REP(_options.satSolver());
+  }
+
+}
+void BindingFragments::OneBindingSat::_printBindings(){
+    for(auto & _ : _bindings){
+      cout<< _.first->toString() << ": " << endl;
+      SATClauseStack::Iterator it(*_.second);
+      while (it.hasNext()){
+        cout<< "\t" << it.next()->toString() << endl;
+      }
+    }
 }

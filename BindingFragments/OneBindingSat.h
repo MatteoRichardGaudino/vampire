@@ -59,24 +59,26 @@ public:
 private:
   const Array<Literal*>& _literals;
   unsigned int _literalSize;
-  int _start;
-  int _end;
+  unsigned int _start;
+  unsigned int _end;
   unsigned int _arity = 0;
 };
 
 
 class MaximalUnifiableSubsets{
 public:
-  MaximalUnifiableSubsets(ArityGroupIterator::GroupIterator& group, Indexing::SubstitutionTree& tree);
+  MaximalUnifiableSubsets(ArityGroupIterator::GroupIterator group, std::function<bool(std::map<Literal*, int>)> fun);
 
-  void mus(Literal* literal);
+  bool mus(Literal* literal);
 
 private:
   ArityGroupIterator::GroupIterator _group;
-  Indexing::SubstitutionTree& _tree;
+  Indexing::SubstitutionTree _tree;
   std::map<Literal*, int> _s;
+  std::function<bool(std::map<Literal*, int>)> _fun;
 
-  void _mus(Literal* literal, int depth);
+  void _buildTree();
+  bool _mus(Literal* literal, int depth);
 };
 
 class OneBindingSat {
@@ -86,7 +88,6 @@ class OneBindingSat {
     bool solve();
 
   private:
-    friend class BindingClassifier;
 
     PrimitiveProofRecordingSATSolver* _solver;
     SAT2FO _sat2fo;
@@ -96,17 +97,23 @@ class OneBindingSat {
     ClauseStack* _satClauses;
     LiteralList* _satLiterals;
 
+    std::map<Literal*, SATClauseStack*> _bindings;
+    unsigned int _maxBindingVarNo = 0;
+
 
     Formula* generateSatFormula(Formula* formula);
     void generateSATClauses(Unit* unit);
 
+
+    PrimitiveProofRecordingSATSolver* _newSatSolver();
     void setupSolver();
     void printAssignment();
     void blockModel();
 
-    Indexing::SubstitutionTree _buildSubstitutionTree(const Array<Literal*>& literals, ArityGroupIterator::GroupIterator& groupIterator);
+    void _addBinding(Literal* literal);
+    void _addBinding(Literal* literal, Formula* formula);
 
-
+    void _printBindings();
 };
 
 }

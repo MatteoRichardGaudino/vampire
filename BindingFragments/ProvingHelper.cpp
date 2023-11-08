@@ -73,9 +73,9 @@ void termIS(UnitList* units)
       auto resultIt = is.getUnifications(literals[j], false, true);
       auto clause = unit->asClause();
       auto literals = clause->literals();
-      for (int j = 0; j < clause->length(); j++) {
+      for (unsigned int j = 0; j < clause->length(); j++) {
         auto lit = literals[j];
-        for (int k = 0; k < lit->arity(); k++) {
+        for (unsigned int k = 0; k < lit->arity(); k++) {
           if (lit->termArg(k).isTerm())
             is.insert(TypedTermList(lit->termArg(k).term()), lit, clause);
         }

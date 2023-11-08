@@ -20,15 +20,14 @@ Fragment BindingClassifier::classify(UnitList* units){
   if(it.hasNext()){
     auto formula = it.next()->getFormula();
     classification = classify(formula);
-    cout<< "[classify] Formula: " << formula->toString() << " fragment: "<< classification << endl;
+    cout<< "[classify] Formula: " << formula->toString() << " fragment: "<< fragmentToString(classification)<< endl;
     if(!it.hasNext() || classification == NONE) return classification;
   }
   while (it.hasNext()){
     auto formula = it.next()->getFormula();
     auto classification2 = classify(formula);
-    cout<< "[classify] Formula: " << formula->toString() << " fragment: "<< classification2 << endl;
+    cout<< "[classify] Formula: " << formula->toString() << " fragment: "<< fragmentToString(classification2) << endl;
     classification = BindingClassification::compare(classification, classification2);
-    cout<< "\t[classify-Compare] fragment: "<< classification << endl;
     if(classification == NONE) return classification;
   }
   return classification;
