@@ -202,6 +202,16 @@ VWARN_UNUSED
 Problem *do1BProving(){
   Problem *prb = getPreprocessedProblemForBindingFragments();
 
+  // ---------print  INPUT ---------
+  cout<< "----------- Input -----------" << endl;
+  UnitList::Iterator it(prb->units());
+  while (it.hasNext()) {
+    cout<< it.next()->toString() << endl;
+  }
+  cout<< "----------- end -----------" << endl;
+
+
+
   env.statistics->phase = Statistics::CLASSIFY;
   auto classification = BindingFragments::BindingClassifier::classify(prb->units());
 

@@ -12,6 +12,8 @@ using namespace std;
 using namespace Kernel;
 using namespace BindingFragments;
 
+// ----------------------- BindingClassifier -----------------------
+
 
 Fragment BindingClassifier::classify(UnitList* units){
   UnitList::Iterator it(units);
@@ -70,8 +72,8 @@ Fragment BindingClassifier::classify(Formula* formula){
       do {
         subformula = subformula->qarg();
         connective = subformula->connective();
-        if(connective == Connective::EXISTS) canBeUniversal = false;
-      } while (connective == Connective::FORALL || connective == Connective::EXISTS);
+        if(connective == EXISTS) canBeUniversal = false;
+      } while (connective == FORALL || connective == EXISTS);
 
       auto classification = _classifyHelper(subformula).fragment;
       if(!canBeUniversal && classification == UNIVERSAL_ONE_BINDING)
@@ -90,7 +92,7 @@ Fragment BindingClassifier::classify(Formula* formula){
 BindingClassification BindingClassifier::_classifyHelper(Formula* formula){
   switch (formula->connective()) {
     case LITERAL:
-      return {UNIVERSAL_ONE_BINDING, formula->literal()->termArgs()};
+      return {UNIVERSAL_ONE_BINDING, formula->literal()};
     case AND:
     case OR:{
       FormulaList::Iterator it(formula->args());
@@ -111,8 +113,9 @@ BindingClassification BindingClassifier::_classifyHelper(Formula* formula){
     }
     case NOT: {
       auto subformula = formula->uarg();
-      if (subformula->connective() == LITERAL)
-        return {UNIVERSAL_ONE_BINDING, subformula->literal()->termArgs()};
+      if (subformula->connective() == LITERAL) {
+        return {UNIVERSAL_ONE_BINDING, subformula->literal()};
+      }
       else
         return {NONE, nullptr};
     }
@@ -125,106 +128,6 @@ BindingClassification BindingClassifier::_classifyHelper(Formula* formula){
   }
 }
 
-
-bool BindingClassifier::_isFragment(Kernel::Formula *formula, BindingFragments::Fragment fragment){
-  switch (formula->connective()) {
-    case FALSE:
-    case TRUE:
-    case LITERAL:
-      return true;
-    case AND:
-    case OR: {
-      FormulaList::Iterator it(formula->args());
-      while (it.hasNext()) {
-        if (!_isFragment(it.next(), fragment))
-          return false;
-      }
-      return true;
-    }
-    case NOT:
-      if (formula->uarg()->connective() == Connective::LITERAL)
-        return true;
-      else
-        return false;
-    case FORALL:
-    case EXISTS: {
-      Formula *subformula = formula;
-      Connective connective = formula->connective();
-      if(fragment == UNIVERSAL_ONE_BINDING && connective == Connective::EXISTS) return false;
-      do {
-        subformula = subformula->qarg();
-        connective = subformula->connective();
-        if(fragment == UNIVERSAL_ONE_BINDING && connective == Connective::EXISTS) return false;
-      } while (connective == Connective::FORALL || connective == Connective::EXISTS);
-      auto term = getBindingTerm(subformula);
-      if(term == nullptr) return false;
-      switch (fragment) {
-        case UNIVERSAL_ONE_BINDING:
-        case ONE_BINDING:
-          return _isOneBindingHelper(subformula, term);
-        case CONJUNCTIVE_BINDING:
-          return _isConjunctiveBindingHelper(subformula, term);
-        case DISJUNCTIVE_BINDING:
-          return _isDisjunctiveBindingHelper(subformula, term);
-        default:
-          return false;
-      }
-    }
-    default:
-      return false;
-  }
-}
-bool BindingClassifier::_isOneBindingHelper(Formula *formula, TermList *term){
-  switch (formula->connective()) {
-    case LITERAL:
-      return Kernel::TermList::equals(*term, *formula->literal()->termArgs());
-    case AND:
-    case OR:{
-        FormulaList::Iterator it(formula->args());
-        while (it.hasNext()) {
-          if (!_isOneBindingHelper(it.next(), term))
-            return false;
-        }
-        return true;
-    }
-    case NOT:
-      return _isOneBindingHelper(formula->uarg(), term);
-    default:
-      return false;
-  }
-}
-
-bool BindingClassifier::_isFragment(UnitList* units, Fragment fragment){
-  UnitList::Iterator it(units);
-  while (it.hasNext()){
-    auto formula = it.next()->getFormula();
-
-    bool res;
-    switch(fragment){
-      case ONE_BINDING:
-          res = isOneBinding(formula);
-          break;
-      case CONJUNCTIVE_BINDING:
-          res = isConjunctiveBinding(formula);
-          break;
-      case UNIVERSAL_ONE_BINDING:
-          res = isUniversalOneBinding(formula);
-          break;
-      case DISJUNCTIVE_BINDING:
-          res = isDisjunctiveBinding(formula);
-          break;
-      default:
-          res = false;
-    }
-    cout<< "[_isFragment(_, " << fragment << ")] " << ((res)? "TRUE ": "FALSE ") << " formula: " << formula->toString() << endl;
-    if(!res) return false;
-  }
-  return true;
-}
-
-TermList* BindingClassifier::getBindingTerm(Formula* formula){
-  return mostLeftLiteral(formula)->termArgs();
-}
 
 Literal* BindingClassifier::mostLeftLiteral(Formula* formula){
   switch (formula->connective()){
@@ -240,62 +143,11 @@ Literal* BindingClassifier::mostLeftLiteral(Formula* formula){
   }
 }
 
-bool BindingClassifier::_isConjunctiveBindingHelper(Formula *formula, TermList *term){
-  switch (formula->connective()) {
-    case LITERAL:
-      return true;
-    case AND: {
-      FormulaList::Iterator it(formula->args());
-      while (it.hasNext()) {
-          if (!_isConjunctiveBindingHelper(it.next(), term))
-            return false;
-      }
-      return true;
-    }
-    case OR: {
-      FormulaList::Iterator it(formula->args());
-      while (it.hasNext()) {
-          if (!_isOneBindingHelper(it.next(), term))
-            return false;
-      }
-      return true;
-    }
-    case NOT:
-      return _isOneBindingHelper(formula->uarg(), term);
-    default:
-      return false;
-  }
-}
-bool BindingClassifier::_isDisjunctiveBindingHelper(Formula *formula, TermList *term){
-  switch (formula->connective()) {
-    case LITERAL:
-      return true;
-    case OR: {
-      FormulaList::Iterator it(formula->args());
-      while (it.hasNext()) {
-          if (!_isDisjunctiveBindingHelper(it.next(), term))
-            return false;
-      }
-      return true;
-    }
-    case AND: {
-      FormulaList::Iterator it(formula->args());
-      while (it.hasNext()) {
-          if (!_isOneBindingHelper(it.next(), term))
-            return false;
-      }
-      return true;
-    }
-    case NOT:
-      return _isOneBindingHelper(formula->uarg(), term);
-    default:
-      return false;
-  }
-}
 
-BindingClassification::BindingClassification(): fragment(NONE), term(nullptr){}
-BindingClassification::BindingClassification(Fragment fragment, TermList *term) : fragment(fragment), term(term) {}
+// ----------------------- BindingClassification -----------------------
 
+BindingClassification::BindingClassification(): fragment(NONE), mostLeftLit(nullptr){}
+BindingClassification::BindingClassification(Fragment fragment, Literal *mostLeftLit) : fragment(fragment), mostLeftLit(mostLeftLit) {}
 
 Fragment BindingClassification::compare(const Fragment &first, const Fragment &second){
   if(first == CONJUNCTIVE_BINDING && second == DISJUNCTIVE_BINDING) return NONE;
@@ -306,22 +158,49 @@ Fragment BindingClassification::compare(const Fragment &first, const Fragment &s
 }
 BindingClassification BindingClassification::compare(const BindingClassification &first, const BindingClassification &second, Connective connective){
   if(first.is(ONE_BINDING) && second.is(ONE_BINDING)){
-    if(first.term == nullptr || second.term == nullptr) return {(first.fragment <= second.fragment)? second.fragment: first.fragment, nullptr};
-    if(TermList::equals(*first.term, *second.term))
+    if(compareLiteralTerms(first.mostLeftLit, second.mostLeftLit)) {
       if(first.fragment <= second.fragment) return second; // If one is UNIVERSAL_ONE_BINDING
-      else return first;
-    else{
-      if(connective == Connective::AND)
-        return {Fragment::CONJUNCTIVE_BINDING, nullptr};
-      else if(connective == Connective::OR)
-        return {Fragment::DISJUNCTIVE_BINDING, nullptr};
+      return first;
     }
+    if(connective == AND)
+      return {CONJUNCTIVE_BINDING, nullptr};
+    if(connective == OR)
+      return {DISJUNCTIVE_BINDING, nullptr};
   } // return ONE_BINDING or UNIVERSAL_ONE_BINDING
-  else if(first.fragment == second.fragment) return first; // return DISJUNCTIVE or CONJUNCTIVE
-  else if(first.is(ONE_BINDING) && second.is(CONJUNCTIVE_BINDING) && connective == AND) return second; // return CONJUNCTIVE
-  else if(first.is(ONE_BINDING) && second.is(DISJUNCTIVE_BINDING) && connective == OR) return second; // return DISJUNCTIVE
-  else if(second.is(ONE_BINDING) && first.is(CONJUNCTIVE_BINDING) && connective == AND) return first; // return CONJUNCTIVE
-  else if(second.is(ONE_BINDING) && first.is(DISJUNCTIVE_BINDING) && connective == OR) return first; // return DISJUNCTIVE
+  if(first.is(ONE_BINDING) && second.is(CONJUNCTIVE_BINDING) && connective == AND) return second; // return CONJUNCTIVE
+  if(first.is(ONE_BINDING) && second.is(DISJUNCTIVE_BINDING) && connective == OR) return second; // return DISJUNCTIVE
+  if(second.is(ONE_BINDING) && first.is(CONJUNCTIVE_BINDING) && connective == AND) return first; // return CONJUNCTIVE
+  if(second.is(ONE_BINDING) && first.is(DISJUNCTIVE_BINDING) && connective == OR) return first; // return DISJUNCTIVE
+
+  if(first.is(CONJUNCTIVE_BINDING) && second.is(CONJUNCTIVE_BINDING) && connective == AND) return first;
+  if(first.is(DISJUNCTIVE_BINDING) && second.is(DISJUNCTIVE_BINDING) && connective == OR) return first;
 
   return {NONE, nullptr};
+}
+
+bool BindingClassification::compareLiteralTerms(const Literal* first, const Literal* second){
+  if(first == nullptr && second == nullptr) return true;
+  if(first == nullptr || second == nullptr) return false;
+
+  // cout << "Compare: " << first->toString() << ", " << second->toString() << endl;
+  const auto a1 = first->arity();
+  const auto a2 = second->arity();
+  if(a1 != a2) return false;
+  if(a1 == 0 && a2 == 0) return true;
+
+  auto t1 = first->args();
+  auto t2 = second->args();
+
+  for(unsigned i = 0; i < a1; ++i) {
+    // cout<< "\tCompare: " << t1->toString() << ", " << t2->toString() << endl;
+    if(!TermList::equals(*t1, *t2)) {
+      // cout<< "FALSE" << endl;
+      return false;
+    }
+
+    t1 = t1->next();
+    t2 = t2->next();
+  }
+  // cout<< "TRUE" << endl;
+  return true;
 }
