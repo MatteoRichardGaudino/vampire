@@ -44,7 +44,7 @@ public:
   BindingClassification();
   BindingClassification(Fragment fragment, Literal *mostLeftLit);
 
-  inline bool is(Fragment fragment1) const{
+  bool is(Fragment fragment1) const{
     return fragment == fragment1 || (fragment1 == ONE_BINDING && fragment == UNIVERSAL_ONE_BINDING);
   }
 
@@ -52,7 +52,6 @@ public:
   static BindingClassification compare(const BindingClassification &first, const BindingClassification &second, Connective connective);
 
   static bool compareLiteralTerms(const Literal* first, const Literal* second);
-private:
 };
 
 class BindingClassifier {

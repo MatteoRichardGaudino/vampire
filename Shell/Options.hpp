@@ -399,7 +399,8 @@ public:
     TCLAUSIFY,
     TPREPROCESS,
     VAMPIRE,
-    ONE_BINDING
+    ONE_BINDING,
+    FRAGMENT_CLASSIFICATION
 };
 
   enum class Schedule : unsigned int {

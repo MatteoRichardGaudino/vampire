@@ -477,6 +477,12 @@ void oneBindingMode(){
   }
 }
 
+void fragmentClassificationMode(){
+  ScopedPtr<Problem> prb(getPreprocessedProblemForBindingFragments());
+  auto classification = BindingFragments::BindingClassifier::classify(prb->units());
+  cout<< BindingFragments::fragmentToString(classification) << endl;
+}
+
 void spiderMode()
 {
   env.options->setBadOptionChoice(Options::BadOption::HARD);
@@ -715,6 +721,9 @@ int main(int argc, char* argv[])
       break;
     case Options::Mode::ONE_BINDING:
       oneBindingMode();
+      break;
+    case Options::Mode::FRAGMENT_CLASSIFICATION:
+      fragmentClassificationMode();
       break;
 
     case Options::Mode::CASC:
