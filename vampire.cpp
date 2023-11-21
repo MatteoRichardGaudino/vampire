@@ -59,8 +59,8 @@
 #include "Saturation/SaturationAlgorithm.hpp"
 
 #include "BindingFragments/ProvingHelper.h"
-#include "BindingFragments/Preprocess.h"
-#include "BindingFragments/BindingClassifier.h"
+#include "BindingFragments/preprocess/Preprocess.h"
+#include "BindingFragments/preprocess/BindingClassifier.h"
 
 #include "FMB/ModelCheck.hpp"
 
@@ -203,12 +203,12 @@ Problem *do1BProving(){
   Problem *prb = getPreprocessedProblemForBindingFragments();
 
   // ---------print  INPUT ---------
-  cout<< "----------- Input -----------" << endl;
-  UnitList::Iterator it(prb->units());
-  while (it.hasNext()) {
-    cout<< it.next()->toString() << endl;
-  }
-  cout<< "----------- end -----------" << endl;
+  // cout<< "----------- Input -----------" << endl;
+  // UnitList::Iterator it(prb->units());
+  // while (it.hasNext()) {
+  //   cout<< it.next()->toString() << endl;
+  // }
+  // cout<< "----------- end -----------" << endl;
 
 
 
@@ -478,8 +478,21 @@ void oneBindingMode(){
 }
 
 void fragmentClassificationMode(){
-  ScopedPtr<Problem> prb(getPreprocessedProblemForBindingFragments());
+  ScopedPtr<Problem> prb(UIHelper::getInputProblem(*env.options));
+  BindingFragments::Preprocess prepro(false, false, false); // Do only nnf
+  prepro.preprocess(*prb);
   auto classification = BindingFragments::BindingClassifier::classify(prb->units());
+
+  // check if has negated conjecture
+  if(classification == BindingFragments::DISJUNCTIVE_BINDING) {
+    bool containsConjecture = false;
+    UnitList::Iterator it(prb->units());
+    while (it.hasNext() && !containsConjecture) {
+      auto inf = it.next()->inference();
+      if(inf.rule() == InferenceRule::NEGATED_CONJECTURE) containsConjecture = true; // TODO probabilmente c'è un modo migliore per fare questo
+    }
+    if(containsConjecture) cout<< "~";
+  }
   cout<< BindingFragments::fragmentToString(classification) << endl;
 }
 

@@ -6,7 +6,7 @@
 #include "Kernel/Clause.hpp"
 #include "Indexing/Index.hpp"
 #include "Indexing/LiteralSubstitutionTree.hpp"
-#include "BindingClassifier.h"
+#include "preprocess/BindingClassifier.h"
 #include "Indexing/TermSubstitutionTree.hpp"
 #include "OneBindingSat.h"
 

@@ -165,9 +165,9 @@ enum class InferenceRule : unsigned char {
 //     /** Replace formula (Q x1 ... xk ... x_n)A by
 //      * (Q x1 ... xk-1 xk+1 ... x_n)A, where xk does not occur in A */
 //     DUMMY_QUANTIFIER_REMOVAL,
-//     /** Transformation (A x1 ... xn)(F1 & ... & Fm) ->
-//      * (A x1 ... xn)F1 & ... & (A x1 ... xn)Fm) */
-//     FORALL_AND,
+     /** Transformation (A x1 ... xn)(F1 & ... & Fm) ->
+      * (A x1 ... xn)F1 & ... & (A x1 ... xn)Fm) */
+     FORALL_AND,
 //     /** Transformation (E x1 ... xn)(F1 \/ ... \/ Fm) ->
 //      * (E x1 ... xn)F1 \/ ... \/ (E x1 ... xn)Fm) */
 //     EXISTS_OR,

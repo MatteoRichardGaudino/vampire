@@ -773,10 +773,12 @@ set(VAMPIRE_SOURCES
         BindingFragments/OneBindingSat.cpp
         BindingFragments/OneBindingSat.h
         BindingFragments/OneBindingSat.h
-        BindingFragments/BindingClassifier.cpp
-        BindingFragments/BindingClassifier.h
-        BindingFragments/Preprocess.cpp
-        BindingFragments/Preprocess.h
+        BindingFragments/preprocess/BindingClassifier.cpp
+        BindingFragments/preprocess/BindingClassifier.h
+        BindingFragments/preprocess/Preprocess.cpp
+        BindingFragments/preprocess/Preprocess.h
+        BindingFragments/preprocess/ForallAnd.cpp
+        BindingFragments/preprocess/ForallAnd.h
 )
 
 ################################################################

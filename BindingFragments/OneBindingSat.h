@@ -11,7 +11,7 @@
 #include "SAT/SATSolver.hpp"
 #include "Indexing/SubstitutionTree.hpp"
 
-#include "BindingClassifier.h"
+#include "preprocess/BindingClassifier.h"
 
 using namespace Kernel;
 namespace BindingFragments{

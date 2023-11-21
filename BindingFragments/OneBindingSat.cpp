@@ -3,7 +3,7 @@
 //
 
 #include "OneBindingSat.h"
-#include "BindingClassifier.h"
+#include "preprocess/BindingClassifier.h"
 #include "Shell/CNF.hpp"
 #include "Kernel/FormulaUnit.hpp"
 #include "Indexing/TermSharing.hpp"
@@ -105,7 +105,7 @@ bool BindingFragments::OneBindingSat::solve(){
 
       while (group.hasNext()){
         auto lit = group.next();
-        cout<< " -------------------- Maximal unifiable subsets for " << lit->toString() << " ------------------" << endl;
+        //cout<< " -------------------- Maximal unifiable subsets for " << lit->toString() << " ------------------" << endl;
         bool res = mus.mus(lit);
         if(!res){
           RESULT = false;
@@ -281,7 +281,7 @@ bool BindingFragments::MaximalUnifiableSubsets::_mus(Literal *literal, int depth
       }
   }
 
-  if(isMax){
+  if(isMax && depth > 2){ // TODO depth > 2. Se depth è 1 significa che c'è un solo elemento nella soluzione ed è per forza soddisfacibile
       if(!_fun(_s)){
         return false;
       }

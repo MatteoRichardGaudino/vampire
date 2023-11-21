@@ -625,7 +625,8 @@ vstring Kernel::ruleName(InferenceRule rule)
   case InferenceRule::NNF:
     return "nnf transformation";
 //  case DUMMY_QUANTIFIER_REMOVAL:
-//  case FORALL_AND:
+  case InferenceRule::FORALL_AND:
+    return "forall and";
 //  case EXISTS_OR:
 //  case QUANTIFIER_SWAP:
 //  case FORALL_OR:

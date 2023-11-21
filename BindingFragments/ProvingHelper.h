@@ -7,7 +7,7 @@
 
 #include "Kernel/Problem.hpp"
 #include "Kernel/Formula.hpp"
-#include "BindingClassifier.h"
+#include "preprocess/BindingClassifier.h"
 
 namespace BindingFragments{
 using namespace Kernel;
