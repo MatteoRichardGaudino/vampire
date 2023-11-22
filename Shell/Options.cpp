@@ -125,6 +125,7 @@ void Options::init()
                                         "vampire",
                                         "1b",
                                       "classify",
+                                      "classify_sk",
                                   });
     _mode.description=
     "Select the mode of operation. Choices are:\n"
@@ -136,6 +137,7 @@ void Options::init()
     "  -output,profile: output information about the problem\n"
     "  -1b: Solve one binding problems\n"
     "  -classify: Classify Fragment of a problem\n"
+    "  -classify_sk: Classify Fragment of a problem with skolemization\n"
     "Some modes are not currently maintained (get in touch if interested):\n"
     "  -bpa: perform bound propagation\n"
     "  -consequence_elimination: perform consequence elimination\n"

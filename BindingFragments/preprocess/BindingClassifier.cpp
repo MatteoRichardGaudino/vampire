@@ -19,19 +19,24 @@ Fragment BindingClassifier::classify(UnitList* units){
   UnitList::Iterator it(units);
   Fragment classification;
 
+  bool out = env.options->showPreprocessing();
+  if(out) env.beginOutput();
+
   if(it.hasNext()){
     auto formula = it.next()->getFormula();
     classification = classify(formula);
-    cout<< "[classify] Formula: " << formula->toString() << " fragment: "<< fragmentToString(classification)<< endl;
+    if(out) env.out() << "[classify] Formula: " << formula->toString() << " fragment: "<< fragmentToString(classification)<< endl;
     if(!it.hasNext() || classification == NONE) return classification;
   }
   while (it.hasNext()){
     auto formula = it.next()->getFormula();
     auto classification2 = classify(formula);
-    cout<< "[classify] Formula: " << formula->toString() << " fragment: "<< fragmentToString(classification2) << endl;
+    if(out) env.out() << "[classify] Formula: " << formula->toString() << " fragment: "<< fragmentToString(classification2) << endl;
     classification = BindingClassification::compare(classification, classification2);
     if(classification == NONE) return classification;
   }
+
+  if(out) env.endOutput();
   return classification;
 }
 Fragment BindingClassifier::classify(Formula* formula){

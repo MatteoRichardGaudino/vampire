@@ -477,23 +477,30 @@ void oneBindingMode(){
   }
 }
 
-void fragmentClassificationMode(){
+void fragmentClassificationMode(bool sk){
   ScopedPtr<Problem> prb(UIHelper::getInputProblem(*env.options));
-  BindingFragments::Preprocess prepro(false, false, false); // Do only nnf
-  prepro.preprocess(*prb);
-  auto classification = BindingFragments::BindingClassifier::classify(prb->units());
 
   // check if has negated conjecture
-  if(classification == BindingFragments::DISJUNCTIVE_BINDING) {
-    bool containsConjecture = false;
-    UnitList::Iterator it(prb->units());
+  bool containsConjecture = false;
+  if(!sk) {
+      UnitList::Iterator it(prb->units());
     while (it.hasNext() && !containsConjecture) {
       auto inf = it.next()->inference();
       if(inf.rule() == InferenceRule::NEGATED_CONJECTURE) containsConjecture = true; // TODO probabilmente c'è un modo migliore per fare questo
     }
-    if(containsConjecture) cout<< "~";
   }
-  cout<< BindingFragments::fragmentToString(classification) << endl;
+
+  BindingFragments::Preprocess prepro(sk, false, false);
+  prepro.preprocess(*prb);
+  auto classification = BindingFragments::BindingClassifier::classify(prb->units());
+
+  env.beginOutput();
+  env.out() << endl;
+  if(classification == BindingFragments::DISJUNCTIVE_BINDING && containsConjecture) {
+    env.out() << "~";
+  }
+  env.out() << fragmentToString(classification) << endl;
+  env.endOutput();
 }
 
 void spiderMode()
@@ -736,8 +743,11 @@ int main(int argc, char* argv[])
       oneBindingMode();
       break;
     case Options::Mode::FRAGMENT_CLASSIFICATION:
-      fragmentClassificationMode();
+      fragmentClassificationMode(false);
       break;
+    case Options::Mode::FRAGMENT_CLASSIFICATION_SK:
+      fragmentClassificationMode(true);
+    break;
 
     case Options::Mode::CASC:
       env.options->setIgnoreMissing(Options::IgnoreMissing::WARN);

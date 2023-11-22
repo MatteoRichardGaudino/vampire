@@ -400,7 +400,8 @@ public:
     TPREPROCESS,
     VAMPIRE,
     ONE_BINDING,
-    FRAGMENT_CLASSIFICATION
+    FRAGMENT_CLASSIFICATION,
+    FRAGMENT_CLASSIFICATION_SK
 };
 
   enum class Schedule : unsigned int {
