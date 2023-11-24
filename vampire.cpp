@@ -126,31 +126,14 @@ Problem* getPreprocessedProblem()
 
   return prb;
 } // getPreprocessedProblem
-Problem* getPreprocessedProblemForBindingFragments(){
-#ifdef __linux__
-  unsigned saveInstrLimit = env.options->instructionLimit();
-  if (env.options->parsingDoesNotCount()) {
-    env.options->setInstructionLimit(0);
-  }
-#endif
-
-  Problem* prb = UIHelper::getInputProblem(*env.options);
-
-#ifdef __linux__
-  if (env.options->parsingDoesNotCount()) {
-    env.options->setInstructionLimit(saveInstrLimit+Timer::elapsedMegaInstructions());
-  }
-#endif
-
+void preprocessProblemForBindingFragments(Problem& prb){
   TIME_TRACE(TimeTrace::PREPROCESSING);
 
   // this will provide warning if options don't make sense for problem
-  env.options->checkProblemOptionConstraints(prb->getProperty(), /*before_preprocessing = */ true);
+  env.options->checkProblemOptionConstraints(prb.getProperty(), /*before_preprocessing = */ true);
 
-  BindingFragments::Preprocess prepro;
-  prepro.preprocess(*prb);
-
-  return prb;
+  BindingFragments::Preprocess prepro(true, false, true);
+  prepro.preprocess(prb);
 } // getPreprocessedProblem for binding fragments mode
 
 
@@ -200,34 +183,70 @@ Problem *doProving()
 }
 VWARN_UNUSED
 Problem *do1BProving(){
-  Problem *prb = getPreprocessedProblemForBindingFragments();
+  Problem* prb = UIHelper::getInputProblem(*env.options);
+  bool containsConjecture = UIHelper::haveConjecture();
 
-  // ---------print  INPUT ---------
-  // cout<< "----------- Input -----------" << endl;
-  // UnitList::Iterator it(prb->units());
-  // while (it.hasNext()) {
-  //   cout<< it.next()->toString() << endl;
-  // }
-  // cout<< "----------- end -----------" << endl;
-
+  BindingFragments::Preprocess prepro(false, false, false);
+  {
+    env.statistics->phase = Statistics::PREPROCESSING;
+    TIME_TRACE(TimeTrace::PREPROCESSING)
+    prepro.preprocess(*prb);
+  }
 
 
   env.statistics->phase = Statistics::CLASSIFY;
   auto classification = BindingFragments::BindingClassifier::classify(prb->units());
 
+  bool canSolve = true;
+
   switch (classification) {
     case BindingFragments::UNIVERSAL_ONE_BINDING:
-    case BindingFragments::ONE_BINDING:
-    case BindingFragments::CONJUNCTIVE_BINDING:
-      BindingFragments::ProvingHelper::run1BSatAlgorithm(*prb, *env.options, classification);
       break;
-    case BindingFragments::DISJUNCTIVE_BINDING:
+    case BindingFragments::ONE_BINDING: {
+      {
+        env.statistics->phase = Statistics::PREPROCESSING;
+        TIME_TRACE(TimeTrace::PREPROCESSING)
+        prepro.setSkolemize(true);
+        prepro.preprocess(*prb);
+      }
+    }
+    break;
+    case BindingFragments::CONJUNCTIVE_BINDING: {
+      env.statistics->phase = Statistics::PREPROCESSING;
+      TIME_TRACE(TimeTrace::PREPROCESSING)
+      prepro.setSkolemize(true);
+      prepro.setDistributeForall(true);
+      prepro.preprocess(*prb);
+
+    }
+      break;
+    case BindingFragments::DISJUNCTIVE_BINDING: {
+      if(containsConjecture) {
+        TIME_TRACE(TimeTrace::PREPROCESSING)
+        prepro.negatedProblem(*prb);
+        prepro.setSkolemize(true);
+        prepro.setDistributeForall(true);
+        prepro.preprocess(*prb);
+      } else {
+        canSolve = false;
+      }
+    }
+    break;
     case BindingFragments::NONE:
-      cout<< "Can't solve this fragment: " << BindingFragments::fragmentToString(classification) << endl;
-      env.statistics->terminationReason = Statistics::INAPPROPRIATE;
-      env.statistics->refutation = 0;
+      canSolve = false;
       break;
   }
+
+  if(!canSolve) {
+    cout<< "Can't solve this fragment: " << BindingFragments::fragmentToString(classification) << endl;
+      env.statistics->terminationReason = Statistics::INAPPROPRIATE;
+      env.statistics->refutation = 0;
+    return prb;
+  }
+
+  bool solution = BindingFragments::ProvingHelper::run1BSatAlgorithm(*prb, *env.options);
+  env.statistics->terminationReason = (solution)? Statistics::SATISFIABLE : Statistics::REFUTATION;
+  env.options->setProof(Options::Proof::OFF);
 
   return prb;
 }
@@ -480,23 +499,13 @@ void oneBindingMode(){
 void fragmentClassificationMode(bool sk){
   ScopedPtr<Problem> prb(UIHelper::getInputProblem(*env.options));
 
-  // check if has negated conjecture
-  bool containsConjecture = false;
-  if(!sk) {
-      UnitList::Iterator it(prb->units());
-    while (it.hasNext() && !containsConjecture) {
-      auto inf = it.next()->inference();
-      if(inf.rule() == InferenceRule::NEGATED_CONJECTURE) containsConjecture = true; // TODO probabilmente c'è un modo migliore per fare questo
-    }
-  }
-
   BindingFragments::Preprocess prepro(sk, false, false);
   prepro.preprocess(*prb);
   auto classification = BindingFragments::BindingClassifier::classify(prb->units());
 
   env.beginOutput();
   env.out() << endl;
-  if(classification == BindingFragments::DISJUNCTIVE_BINDING && containsConjecture) {
+  if(classification == BindingFragments::DISJUNCTIVE_BINDING && !sk && UIHelper::haveConjecture()) {
     env.out() << "~";
   }
   env.out() << fragmentToString(classification) << endl;

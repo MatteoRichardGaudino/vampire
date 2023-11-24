@@ -5,9 +5,7 @@
 #ifndef VAMPIRE_PROVINGHELPER_H
 #define VAMPIRE_PROVINGHELPER_H
 
-#include "Kernel/Problem.hpp"
 #include "Kernel/Formula.hpp"
-#include "preprocess/BindingClassifier.h"
 
 namespace BindingFragments{
 using namespace Kernel;
@@ -15,10 +13,7 @@ using namespace Shell;
 
 class ProvingHelper {
 public:
-  static void run1BSatAlgorithm(Problem& prb, const Options& opt, int classification);
-
-private:
-  static void toUniversalOneBinding(Problem& prb);
+  static bool run1BSatAlgorithm(Problem& prb, const Options& opt);
 };
 }
 

@@ -22,7 +22,7 @@ public:
   ArityGroupIterator(const Array<Literal*>& literals, unsigned int literalSize)
       : _literals(literals), _literalSize(literalSize), _start(0), _end(0){};
 
-  inline bool hasNext() const{
+  bool hasNext() const{
     return _end < _literalSize;
   }
 
@@ -32,13 +32,14 @@ public:
         : _literals(literals), _start(start), _end(end){
       _i = _start;
     };
-    inline bool hasNext() const{
+
+    bool hasNext() const{
       return _i < _end;
     }
-    inline Literal* next(){
+    Literal* next(){
       return _literals[_i++];
     }
-    inline void reset(){
+    void reset(){
       _i = _start;
     }
   private:
@@ -50,11 +51,9 @@ public:
 
   GroupIterator next();
 
-  inline unsigned int arity() const{
+  unsigned int arity() const{
     return _arity;
   }
-
-
 
 private:
   const Array<Literal*>& _literals;
@@ -67,7 +66,7 @@ private:
 
 class MaximalUnifiableSubsets{
 public:
-  MaximalUnifiableSubsets(ArityGroupIterator::GroupIterator group, std::function<bool(std::map<Literal*, int>)> fun);
+  MaximalUnifiableSubsets(ArityGroupIterator::GroupIterator group, std::function<bool(LiteralStack)> fun);
 
   bool mus(Literal* literal);
 
@@ -75,7 +74,9 @@ private:
   ArityGroupIterator::GroupIterator _group;
   Indexing::SubstitutionTree _tree;
   std::map<Literal*, int> _s;
-  std::function<bool(std::map<Literal*, int>)> _fun;
+  std::function<bool(LiteralStack)> _fun;
+
+  LiteralStack _solution;
 
   void _buildTree();
   bool _mus(Literal* literal, int depth);
@@ -98,7 +99,10 @@ class OneBindingSat {
     LiteralList* _satLiterals;
 
     std::map<Literal*, SATClauseStack*> _bindings;
+    unsigned int _bindingCount = 0;
     unsigned int _maxBindingVarNo = 0;
+
+    bool _showProof;
 
 
     Formula* generateSatFormula(Formula* formula);

@@ -22,11 +22,14 @@ public:
 
   /**
    * Convert the problem from default mode i.e. A1 & A2 & ... & An & ~C
-   * to "Thorem mode" i.e. A1 & A2 & ... & An => C
-   * alias ~A1 | ~A2 | ... | ~An | C
-   *
+   * to (A1 & A2 & ... & An) => C === ~A1 | ~A2 | ... | ~An | C
    */
-  void negatedProblem(Problem& prb);
+  static void negatedProblem(Problem& prb);
+
+  void setSkolemize(bool skolemize) { _skolemize = skolemize; }
+  void setClausify(bool clausify) { _clausify = clausify; }
+  void setDistributeForall(bool distribute_forall) { _distributeForall = distribute_forall; }
+
 private:
   bool _skolemize;
   bool _clausify;

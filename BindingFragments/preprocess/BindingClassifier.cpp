@@ -16,6 +16,7 @@ using namespace BindingFragments;
 
 
 Fragment BindingClassifier::classify(UnitList* units){
+  TIME_TRACE(TimeTrace::CLASSIFICATION)
   UnitList::Iterator it(units);
   Fragment classification;
 

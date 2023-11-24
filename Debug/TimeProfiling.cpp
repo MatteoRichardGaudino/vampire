@@ -35,6 +35,12 @@ const char* const TimeTrace::SHUFFLING;
 const char* const TimeTrace::SINE_SELECTION;
 const char* const TimeTrace::TERM_SHARING;
 
+const char* const TimeTrace::CLASSIFICATION;
+const char* const TimeTrace::ONE_BINDING_ALGORITHM_CONFIG;
+const char* const TimeTrace::MAXIMAL_UNIFIABLE_SUBSET;
+const char* const TimeTrace::ONE_BINDING_ALGORITHM;
+
+
 TimeTrace::TimeTrace() 
   : _root("[root]")
   , _stack({ {&_root, Clock::now(), }, }) 

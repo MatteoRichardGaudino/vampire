@@ -119,19 +119,32 @@ fin:
   prb.reportFormulasEliminated();
 }
 
-
-void BindingFragments::Preprocess::negatedProblem(Problem &prb){
-  FormulaList* axAndConj = FormulaList::empty();
+void BindingFragments::Preprocess::negatedProblem(Problem &prb)
+{
+  FormulaList *axAndConj = FormulaList::empty();
   auto units = prb.units();
   UnitList::Iterator uit(units);
   while (uit.hasNext()) {
-    Unit* u = uit.next();
+    Unit *u = uit.next();
     FormulaList::push(new NegatedFormula(u->getFormula()), axAndConj);
   }
-  UnitList::destroy(units);
-  UnitList::push(new FormulaUnit(
-      new JunctionFormula(OR, axAndConj),
-      FromInput(UnitInputType::CONJECTURE)
-    ), units
-  );
+
+  UnitList::DelIterator dIt(units);
+  if(dIt.hasNext()) {
+    dIt.next();
+    auto newProb = new FormulaUnit(
+                       new JunctionFormula(OR, axAndConj),
+                       FromInput(UnitInputType::CONJECTURE));
+    dIt.replace(newProb);
+
+    if(env.options->showPreprocessing()) {
+      env.beginOutput();
+      env.out() << "[pp] Negated Problem: " << newProb->toString() << std::endl;
+      env.endOutput();
+    }
+  }
+  while (dIt.hasNext()) {
+    dIt.next();
+    dIt.del();
+  }
 }

@@ -103,6 +103,14 @@ public:
   static constexpr const char* const SHUFFLING = "shuffling things";
   static constexpr const char* const SINE_SELECTION = "sine selection";
   static constexpr const char* const TERM_SHARING = "term sharing";
+
+  // Binding fragment related
+  static constexpr const char* const CLASSIFICATION = "Fragment classification";
+  static constexpr const char* const ONE_BINDING_ALGORITHM_CONFIG = "One binding algorithm configuration";
+  static constexpr const char* const MAXIMAL_UNIFIABLE_SUBSET = "Maximal unifiable subset";
+  static constexpr const char* const ONE_BINDING_ALGORITHM = "One binding algorithm";
+
+
   
 private:
   using Clock = std::chrono::steady_clock;
