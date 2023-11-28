@@ -68,6 +68,7 @@ class MaximalUnifiableSubsets{
 public:
   MaximalUnifiableSubsets(ArityGroupIterator::GroupIterator group, std::function<bool(LiteralStack)> fun);
 
+  bool _groundLiteralMus(Literal * literal);
   bool mus(Literal* literal);
 
 private:
@@ -96,7 +97,7 @@ class OneBindingSat {
     const Options& _options;
 
     ClauseStack* _satClauses;
-    LiteralList* _satLiterals;
+    LiteralList*  _satLiterals;
 
     std::map<Literal*, SATClauseStack*> _bindings;
     unsigned int _bindingCount = 0;

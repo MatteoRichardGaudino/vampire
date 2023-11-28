@@ -133,7 +133,9 @@ void BindingFragments::Preprocess::negatedProblem(Problem &prb)
   if(dIt.hasNext()) {
     dIt.next();
     auto newProb = new FormulaUnit(
-                       new JunctionFormula(OR, axAndConj),
+                       (FormulaList::length(axAndConj) != 1)?
+                          new JunctionFormula(OR, axAndConj) :
+                          axAndConj->head(),
                        FromInput(UnitInputType::CONJECTURE));
     dIt.replace(newProb);
 

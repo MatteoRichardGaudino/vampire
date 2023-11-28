@@ -70,6 +70,8 @@ bool BindingFragments::OneBindingSat::solve(){
 
     bool RESULT = true;
 
+
+
     Array<Literal*> implicants;
     int l = 0;
 
@@ -83,15 +85,22 @@ bool BindingFragments::OneBindingSat::solve(){
     }
 
     sort(implicants.begin(), implicants.begin()+l, [](Literal* a, Literal* b) {
-      return a->arity() < b->arity();
+      const auto a1 = a->arity(), b1 = b->arity();
+      const auto g1 = a->ground(), g2 = b->ground();
+
+      if(a1 < b1) return true;
+      if(a1 > b1) return false;
+      if(g1 && !g2) return true;
+      if(g2 && !g1) return false;
+      return a->functor() < b->functor();
     });
 
     if (_showProof) {
       cout<< "Implicants ordered by arity: " << endl;
-    for(int i = 0; i < l; i++){
-      cout<< implicants[i]->toString() << " ";
-    }
-    cout<< endl;
+      for(int i = 0; i < l; i++){
+        cout<< implicants[i]->toString() << " ";
+      }
+      cout<< endl;
     }
 
 
@@ -147,10 +156,13 @@ bool BindingFragments::OneBindingSat::solve(){
 
 void BindingFragments::OneBindingSat::generateSATClauses(Unit* unit){
   auto satFormula = generateSatFormula(unit->getFormula());
+
   Unit* satUnit = new FormulaUnit(satFormula, unit->inference());
 
-  cout<< "Unit: " << unit->toString() << endl;
-  cout<< "SAT Unit: " << satUnit->toString() << endl << endl;
+  if(_showProof) {
+    cout<< "Unit: " << unit->toString() << endl;
+    cout<< "SAT Unit: " << satUnit->toString() << endl << endl;
+  }
   CNF cnf;
   cnf.clausify(satUnit, *_satClauses);
 }
@@ -196,6 +208,8 @@ Formula *BindingFragments::OneBindingSat::generateSatFormula(Formula *formula){
       return new AtomicFormula(newLit);
     }
     default:
+      cout <<  "Connective: " << formula->connective() << endl;
+      cout << "Formula: " << formula->toString() << endl;
       ASSERTION_VIOLATION; // TODO
   }
 }
@@ -208,7 +222,7 @@ void BindingFragments::OneBindingSat::setupSolver(){
     auto clause = cIt.next();
     auto satClause = _sat2fo.toSAT(clause);
     if(satClause == nullptr){
-      if(_showProof) cout<< "Skipping: " << clause->toString() << endl;
+      if(_showProof) cout<< "Skipping: " << clause->toString() << endl; // Todo da controllare. e' null solo se la clausola e' true? e se e' false?
       continue;
     }
 //    cout<< "Clause: " << clause->toString() << endl;
@@ -265,18 +279,37 @@ BindingFragments::ArityGroupIterator::GroupIterator BindingFragments::ArityGroup
 
 
 BindingFragments::MaximalUnifiableSubsets::MaximalUnifiableSubsets(
-    ArityGroupIterator::GroupIterator group, std::function<bool(LiteralStack)> fun):
-          _group(group), _tree(false, false), _fun(fun), _solution(16){
+    ArityGroupIterator::GroupIterator group, std::function<bool(LiteralStack)> fun) : _group(group), _tree(false, false), _fun(fun), _solution(16)
+{
 
   _buildTree();
 
-  while (_group.hasNext()){
+  while (_group.hasNext()) {
     auto lit = _group.next();
     _s[lit] = 0;
   }
   _group.reset();
 }
+bool BindingFragments::MaximalUnifiableSubsets::_groundLiteralMus(Literal *literal){
+  if(_s[literal] != 0) return true;
+  auto uIt = _tree.iterator<SubstitutionTree::UnificationsIterator>(literal, true, false);
+  while (uIt.hasNext()) {
+    auto res = uIt.next();
+    auto u = res.data->literal;
+    if(_s[u] == 0) {
+      if(u->ground()) _s[u] = 1;
+      _solution.push(u);
+    }
+  }
+  bool res = _fun(_solution);
+  _solution.reset();
+  return res;
+}
 bool BindingFragments::MaximalUnifiableSubsets::mus(Literal *literal){
+  if (literal->ground()) {
+    return _groundLiteralMus(literal);
+  }
+
   _s[literal] = 1;
   _solution.push(literal);
   bool res = _mus(literal, 2);
@@ -292,14 +325,29 @@ bool BindingFragments::MaximalUnifiableSubsets::_mus(Literal *literal, int depth
       auto res = uIt.next();
       auto u = res.data->literal;
       if(_s[u] == 0){
+        isMax = false;
         _s[u] = depth;
         //cout<< "push: " << u->toString() << endl;
         _solution.push(u);
-        isMax = false;
-        // Se sub(literal) == literal => literal e u hanno gli stessi termini => u unifica con gli stessi letterali con cui unifica literal
-        if(!_mus(res.subst->applyToQuery(literal), depth+1)) return false;
-        _s[u] = -depth;
-        _solution.pop();
+        unsigned int pop = 1;
+
+        auto sub = res.subst->applyToQuery(literal);
+        while (sub == literal && uIt.hasNext()) {
+          res = uIt.next();
+          u = res.data->literal;
+            if(_s[u] == 0){
+              _s[u] = depth;
+              _solution.push(u);
+              pop++;
+              sub = res.subst->applyToQuery(literal);
+            }
+        }
+
+        if(!_mus(sub, depth+1)) return false;
+
+        //while (pop-- > 0) _s[_solution.pop()] = depth;
+        while (pop-- > 0) _solution.pop();
+
         //cout<< "pop&block: " << u->toString() << endl;
       }
   }
@@ -311,7 +359,7 @@ bool BindingFragments::MaximalUnifiableSubsets::_mus(Literal *literal, int depth
   }
 
   for(auto & _ : _s){
-      if(_.second == -depth){
+      if(_.second == depth){
         _s[_.first] = 0;
   //      cout<< "Unblock: " << _.first->toString() << endl;
       }
