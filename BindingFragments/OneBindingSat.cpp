@@ -18,7 +18,7 @@ using namespace Kernel;
 using namespace Indexing;
 
 
-BindingFragments::OneBindingSat::OneBindingSat(Problem &prb, const Options &opt) : _problem(prb), _options(opt) {
+BindingFragments::OneBindingSat::OneBindingSat(Problem &prb, const Options &opt) : _options(opt) {
   _showProof = _options.proof() == Options::Proof::ON;
   if(_showProof) env.beginOutput();
   TIME_TRACE(TimeTrace::ONE_BINDING_ALGORITHM_CONFIG)
@@ -109,6 +109,7 @@ bool BindingFragments::OneBindingSat::solve(){
     while (RESULT && groupIt.hasNext()){
       auto group = groupIt.next();
       MaximalUnifiableSubsets mus(group, [&](LiteralStack solution){
+        TIME_TRACE(TimeTrace::MAXIMAL_UNIFIABLE_SUBSET_SAT_SOLVING)
         auto solver = _newSatSolver();
         solver->ensureVarCount(_maxBindingVarNo);
         if(_showProof) cout<< "MUS: ";
@@ -132,7 +133,7 @@ bool BindingFragments::OneBindingSat::solve(){
         if(_showProof) {
           cout<< "---------- mus for " << lit->toString() << " ------------" << endl;
         }
-        bool res = mus.mus(lit);
+        bool res = mus.musV2(lit);
         if(!res){
           RESULT = false;
           break;
@@ -215,11 +216,11 @@ Formula *BindingFragments::OneBindingSat::generateSatFormula(Formula *formula){
 }
 void BindingFragments::OneBindingSat::setupSolver(){
   _solver = _newSatSolver();
-  ClauseStack::Iterator cIt(*_satClauses);
+  //ClauseStack::Iterator cIt(*_satClauses);
   SATClauseStack clauses;
   int i = 0;
-  while (cIt.hasNext()){
-    auto clause = cIt.next();
+  while (!_satClauses->isEmpty()){
+    auto clause = _satClauses->pop();
     auto satClause = _sat2fo.toSAT(clause);
     if(satClause == nullptr){
       if(_showProof) cout<< "Skipping: " << clause->toString() << endl; // Todo da controllare. e' null solo se la clausola e' true? e se e' false?
@@ -228,6 +229,7 @@ void BindingFragments::OneBindingSat::setupSolver(){
 //    cout<< "Clause: " << clause->toString() << endl;
     if(_showProof) cout<< "SATClause " << ++i << ": " << satClause->toString() << endl;
     clauses.push(satClause);
+    clause->destroy();
   }
 
   _solver->ensureVarCount(_sat2fo.maxSATVar());
@@ -246,23 +248,24 @@ void BindingFragments::OneBindingSat::printAssignment(){
          << j << ", "
          << _sat2fo.toFO(SATLiteral(j, true))->toString() <<  ", "
          << (_solver->getAssignment(j) == SATSolver::TRUE ? "true" : "false")
-         << ")" << " ";
+         << ")" << endl;
   }
   cout << endl;
 }
-void BindingFragments::OneBindingSat::blockModel(){
+void BindingFragments::OneBindingSat::blockModel()
+{
   SATLiteralStack blockingClause;
   unsigned int max = _sat2fo.maxSATVar();
-  for(unsigned int j = 1; j <= max; j++){
-    if(_solver->getAssignment(j) == SAT::SATSolver::TRUE){
+  for (unsigned int j = 1; j <= max; j++) {
+    if (_solver->getAssignment(j) == SAT::SATSolver::TRUE) {
       blockingClause.push(SATLiteral(j, false));
     }
   }
   auto clause = SATClause::fromStack(blockingClause);
-  if(_showProof) cout<< "Blocking Clause: " << clause->toString() << endl;
+  if (_showProof)
+    cout << "Blocking Clause: " << clause->toString() << endl;
   _solver->addClause(clause);
 }
-
 
 BindingFragments::ArityGroupIterator::GroupIterator BindingFragments::ArityGroupIterator::next(){
   _start = _end;
@@ -290,6 +293,8 @@ BindingFragments::MaximalUnifiableSubsets::MaximalUnifiableSubsets(
   }
   _group.reset();
 }
+
+
 bool BindingFragments::MaximalUnifiableSubsets::_groundLiteralMus(Literal *literal){
   if(_s[literal] != 0) return true;
   auto uIt = _tree.iterator<SubstitutionTree::UnificationsIterator>(literal, true, false);
@@ -297,7 +302,7 @@ bool BindingFragments::MaximalUnifiableSubsets::_groundLiteralMus(Literal *liter
     auto res = uIt.next();
     auto u = res.data->literal;
     if(_s[u] == 0) {
-      if(u->ground()) _s[u] = 1;
+      if(u->ground()) _s[u] = -1;
       _solution.push(u);
     }
   }
@@ -306,6 +311,7 @@ bool BindingFragments::MaximalUnifiableSubsets::_groundLiteralMus(Literal *liter
   return res;
 }
 bool BindingFragments::MaximalUnifiableSubsets::mus(Literal *literal){
+  if(_s[literal] != 0) return true;
   if (literal->ground()) {
     return _groundLiteralMus(literal);
   }
@@ -335,12 +341,12 @@ bool BindingFragments::MaximalUnifiableSubsets::_mus(Literal *literal, int depth
         while (sub == literal && uIt.hasNext()) {
           res = uIt.next();
           u = res.data->literal;
-            if(_s[u] == 0){
-              _s[u] = depth;
-              _solution.push(u);
-              pop++;
-              sub = res.subst->applyToQuery(literal);
-            }
+          if(_s[u] == 0){
+            _s[u] = depth;
+            _solution.push(u);
+            pop++;
+            sub = res.subst->applyToQuery(literal);
+          }
         }
 
         if(!_mus(sub, depth+1)) return false;
@@ -366,6 +372,82 @@ bool BindingFragments::MaximalUnifiableSubsets::_mus(Literal *literal, int depth
   }
   return true;
 }
+
+bool BindingFragments::MaximalUnifiableSubsets::musV2(Literal* literal){
+  if(_s[literal] != 0)
+    return true;
+  if (literal->ground()) {
+    return _groundLiteralMus(literal);
+  }
+
+  _s[literal] = 1;
+  LiteralList* l = LiteralList::empty();
+  bool res = _musV2(literal, l);
+  _s[literal] = -1;
+  delete l;
+  return res;
+}
+bool BindingFragments::MaximalUnifiableSubsets::_musV2(Literal* literal, LiteralList*& fToFree){
+  bool isMax = true;
+  auto uIt = _tree.iterator<SubstitutionTree::UnificationsIterator>(literal, true, false);
+  auto* toFree = LiteralList::empty();
+
+  while (uIt.hasNext()){
+    auto res = uIt.next();
+    auto u = res.data->literal;
+
+    if(_s[u] == 0){
+      _s[u] = 1;
+
+      auto l1 = res.subst->applyToQuery(literal);
+      if(l1 == literal) {
+        auto u1 = res.subst->applyToResult(u);
+        LiteralList::push(u, (u1 == u) ? fToFree : toFree);
+      } else {
+        isMax = false;
+        if(!_musV2(l1, toFree)) return false;
+        _s[u] = -1;
+        LiteralList::push(u, fToFree);
+      }
+    }
+  }
+
+  if(isMax){
+    // Build solution
+    for(auto _ : _s){
+      if(_.second > 0)
+        _solution.push(_.first);
+    }
+    // ------
+    if(!_fun(_solution)){
+      delete toFree;
+      return false;
+    }
+    _solution.reset();
+  }
+
+  while (LiteralList::isNonEmpty(toFree)) _s[LiteralList::pop(toFree)] = 0;
+
+  delete toFree;
+  return true;
+}
+
+
+void BindingFragments::MaximalUnifiableSubsets::_buildSolution()
+{
+  for (auto &_ : _s) {
+    if (_.second > 0)
+      _solution.push(_.first);
+  }
+}
+void BindingFragments::MaximalUnifiableSubsets::_sReplace(int a, int b){
+  for (auto &_ : _s) {
+    if (_.second == a) {
+      _s[_.first] = b;
+    }
+  }
+}
+
 void BindingFragments::MaximalUnifiableSubsets::_buildTree(){
   while (_group.hasNext()){
     auto lit = _group.next();
@@ -375,9 +457,8 @@ void BindingFragments::MaximalUnifiableSubsets::_buildTree(){
 }
 
 
-void BindingFragments::OneBindingSat::_addBinding(Literal *literal){
-  if (_bindings.find(literal) != _bindings.end()) return;
 
+void BindingFragments::OneBindingSat::_addBinding(Literal *literal){
   auto clause = new (1) SATClause(1);
   (*clause)[0] = SATLiteral(literal->functor(), literal->polarity());
   auto stk = new SATClauseStack(1);
@@ -401,8 +482,8 @@ void BindingFragments::OneBindingSat::_addBinding(Literal* literal, Formula *for
     unsigned int size = clause->size();
     auto satClause = new(clause->size()) SATClause(clause->size());
 
-    for(unsigned int i = 0; i < size; i++){
-      auto lit = (*clause)[i];
+    for(int i = 0; i < size; i++){
+      const auto lit = (*clause)[i];
       (*satClause)[i] = SATLiteral(lit->functor(), lit->polarity());
       if(literal->functor() > _maxBindingVarNo) _maxBindingVarNo = literal->functor();
     }

@@ -71,6 +71,10 @@ public:
   bool _groundLiteralMus(Literal * literal);
   bool mus(Literal* literal);
 
+  bool musV2(Literal* literal);
+  bool _musV2(Literal* literal, LiteralList*& fToFree);
+
+
 private:
   ArityGroupIterator::GroupIterator _group;
   Indexing::SubstitutionTree _tree;
@@ -81,6 +85,9 @@ private:
 
   void _buildTree();
   bool _mus(Literal* literal, int depth);
+
+  void _buildSolution();
+  void _sReplace(int a, int b);
 };
 
 class OneBindingSat {
@@ -93,7 +100,6 @@ class OneBindingSat {
 
     PrimitiveProofRecordingSATSolver* _solver;
     SAT2FO _sat2fo;
-    Problem& _problem;
     const Options& _options;
 
     ClauseStack* _satClauses;

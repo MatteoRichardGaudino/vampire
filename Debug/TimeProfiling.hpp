@@ -108,6 +108,7 @@ public:
   static constexpr const char* const CLASSIFICATION = "Fragment classification";
   static constexpr const char* const ONE_BINDING_ALGORITHM_CONFIG = "One binding algorithm configuration";
   static constexpr const char* const MAXIMAL_UNIFIABLE_SUBSET = "Maximal unifiable subset";
+  static constexpr const char* const MAXIMAL_UNIFIABLE_SUBSET_SAT_SOLVING = "Maximal unifiable subset sat solving";
   static constexpr const char* const ONE_BINDING_ALGORITHM = "One binding algorithm";
 
 
