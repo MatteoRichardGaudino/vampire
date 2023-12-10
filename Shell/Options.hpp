@@ -401,7 +401,8 @@ public:
     VAMPIRE,
     ONE_BINDING,
     FRAGMENT_CLASSIFICATION,
-    FRAGMENT_CLASSIFICATION_SK
+    FRAGMENT_CLASSIFICATION_SK,
+    NEG_PRB,
 };
 
   enum class Schedule : unsigned int {

@@ -14,38 +14,107 @@
 #include "../../Shell/CNF.hpp"
 #include "../../Shell/Statistics.hpp"
 #include "ForallAnd.h"
+#include "../../Shell/Preprocess.hpp"
+#include "../../Shell/Naming.hpp"
+
+// void BindingFragments::Preprocess::preprocess(Problem &prb){
+//   Kernel::Preprocess(*env.options).preprocess1(prb);
+//
+//   UnitList::DelIterator uit(prb.units());
+//   while (uit.hasNext()){
+//     auto unit = uit.next();
+//     if(unit->isClause()) continue;
+//
+//     // *** NNF ***
+//     FormulaUnit* fu = static_cast<FormulaUnit*>(unit);
+//     FormulaUnit* fu0 = fu;
+//     fu = NNF::nnf(fu);
+//     fu = Flattening::flatten(fu);
+//
+//     if(fu != fu0){
+//         uit.replace(fu);
+//     }
+//
+//     // *** Skolemisation ***
+//     if(_skolemize || _clausify) {
+//         fu0 = fu;
+//         fu = Skolem::skolemise(fu, false);
+//         if(fu != fu0){
+//           uit.replace(fu);
+//         }
+//
+//       fu = Flattening::flatten(fu);
+//       if(fu != fu0){
+//         uit.replace(fu);
+//       }
+//     }
+//
+//     // *** Distribute Forall over And ***
+//     if(_distributeForall){
+//       fu0 = fu;
+//       fu = ForallAnd::forallAnd(fu);
+//       if(fu != fu0){
+//             uit.replace(fu);
+//       }
+//     }
+//
+//   }
+//
+//   if(_clausify) {
+//     env.statistics->phase = Statistics::CLAUSIFICATION;
+//     clausify(prb);
+//   }
+// }
+
 
 void BindingFragments::Preprocess::preprocess(Problem &prb){
-  env.statistics->phase = Statistics::NORMALIZATION;
+  Kernel::Preprocess(*env.options).preprocess1(prb);
+  Naming naming(env.options->naming(),false, prb.isHigherOrder()); // For now just force eprPreservingNaming to be false, should update Naming
+
   UnitList::DelIterator uit(prb.units());
   while (uit.hasNext()){
     auto unit = uit.next();
-    if(unit->isClause()) continue; // if is clause => is already nnf, skolemised
-//    auto inf = unit->inference();
-//
-//    if(inf.rule() == InferenceRule::NEGATED_CONJECTURE){ // if is conjecture remove negationI
-//      auto conjecture = new FormulaUnit(unit->getFormula()->uarg(), FromInput(UnitInputType::CONJECTURE));
-//      uit.replace(conjecture);
-//      unit = conjecture;
-//    }
+    if(unit->isClause()) continue;
 
-    // *** NNF ***
+
     FormulaUnit* fu = static_cast<FormulaUnit*>(unit);
     FormulaUnit* fu0 = fu;
+
+    // // *** ENNF ***
+    // fu = NNF::ennf(fu);
+    // fu = Flattening::flatten(fu);
+    //
+    // if(fu != fu0){
+    //   uit.replace(fu);
+    // }
+    //
+    // // *** Naming ***
+    //
+    // UnitList* defs;
+    // fu0 = naming.apply(fu,defs);
+    // if (fu0 != fu) {
+    //   ASS(defs);
+    //   uit.insert(defs);
+    //   uit.replace(fu0);
+    // }
+
+    // *** NNF ***
+    fu = static_cast<FormulaUnit*>(unit);
+    fu0 = fu;
     fu = NNF::nnf(fu);
     fu = Flattening::flatten(fu);
 
     if(fu != fu0){
-        uit.replace(fu);
+      uit.replace(fu);
     }
 
     // *** Skolemisation ***
     if(_skolemize || _clausify) {
-        fu0 = fu;
-        fu = Skolem::skolemise(fu, false);
-        if(fu != fu0){
-          uit.replace(fu);
-        }
+      fu0 = fu;
+      fu = Skolem::skolemise(fu, false);
+      if(fu != fu0){
+        uit.replace(fu);
+      }
 
       fu = Flattening::flatten(fu);
       if(fu != fu0){
@@ -58,7 +127,7 @@ void BindingFragments::Preprocess::preprocess(Problem &prb){
       fu0 = fu;
       fu = ForallAnd::forallAnd(fu);
       if(fu != fu0){
-            uit.replace(fu);
+        uit.replace(fu);
       }
     }
 
@@ -69,6 +138,7 @@ void BindingFragments::Preprocess::preprocess(Problem &prb){
     clausify(prb);
   }
 }
+
 
 void BindingFragments::Preprocess::clausify(Problem &prb)
 {

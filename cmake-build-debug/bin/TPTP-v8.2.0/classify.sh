@@ -1,6 +1,6 @@
 #!/bin/sh
-inFile=fof_
-outFile=fof_classification.txt
+inFile=cnf_
+outFile=cnf_classification.txt
 
 
 echo Problem \\t Status \\t Fragment \\t Fragment_sk > $outFile
@@ -23,8 +23,9 @@ do
 #  echo $path
 #  echo
 
-  classification=$(../vampire_dbg_master_6829 --mode classify -t 5m -m 2048 $path | tail -1)
-  classification_sk=$(../vampire_dbg_master_6829 --mode classify_sk -t 5m -m 2048 $path | tail -1)
+  classification=$(../vampire_dbg_master_6832 --mode classify -t 5m -m 8000 $path | tail -1)
+  #classification_sk=$(../vampire_dbg_master_6829 --mode classify_sk -t 5m -m 2048 $path | tail -1)
+  classification_sk=$classification
 
 #  echo res: $res
 #  echo#

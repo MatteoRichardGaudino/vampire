@@ -119,7 +119,7 @@ class OneBindingSat {
     PrimitiveProofRecordingSATSolver* _newSatSolver();
     void setupSolver();
     void printAssignment();
-    void blockModel();
+    void blockModel(Array<Literal*>& implicants, int size);
 
     void _addBinding(Literal* literal);
     void _addBinding(Literal* literal, Formula* formula);

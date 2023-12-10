@@ -126,6 +126,7 @@ void Options::init()
                                         "1b",
                                       "classify",
                                       "classify_sk",
+                                      "neg" // TODO
                                   });
     _mode.description=
     "Select the mode of operation. Choices are:\n"

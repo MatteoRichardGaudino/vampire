@@ -184,7 +184,7 @@ Problem *doProving()
 VWARN_UNUSED
 Problem *do1BProving(){
   Problem* prb = UIHelper::getInputProblem(*env.options);
-  bool containsConjecture = UIHelper::haveConjecture();
+  //bool containsConjecture = UIHelper::haveConjecture();
 
   BindingFragments::Preprocess prepro(false, false, false);
   {
@@ -193,6 +193,17 @@ Problem *do1BProving(){
     prepro.preprocess(*prb);
   }
 
+  // Check if the formula is $false or $true
+  auto units = prb->units();
+  if(UnitList::length(units) == 1) {
+    auto formula = units->head()->getFormula();
+    if(formula->connective() == TRUE || formula->connective() == FALSE) {
+      env.statistics->terminationReason = (formula->connective() == TRUE)? Statistics::SATISFIABLE : Statistics::REFUTATION;
+      env.options->setProof(Options::Proof::OFF);
+      return prb;
+    }
+  }
+  // -------
 
   env.statistics->phase = Statistics::CLASSIFY;
   auto classification = BindingFragments::BindingClassifier::classify(prb->units());
@@ -221,15 +232,15 @@ Problem *do1BProving(){
     }
       break;
     case BindingFragments::DISJUNCTIVE_BINDING: {
-      if(containsConjecture) {
-        TIME_TRACE(TimeTrace::PREPROCESSING)
-        prepro.negatedProblem(*prb);
-        prepro.setSkolemize(true);
-        prepro.setDistributeForall(true);
-        prepro.preprocess(*prb);
-      } else {
+      // if(containsConjecture) {
+      //   TIME_TRACE(TimeTrace::PREPROCESSING)
+      //   prepro.negatedProblem(*prb);
+      //   prepro.setSkolemize(true);
+      //   prepro.setDistributeForall(true);
+      //   prepro.preprocess(*prb);
+      // } else {
         canSolve = false;
-      }
+      // }
     }
     break;
     case BindingFragments::NONE:
@@ -496,6 +507,19 @@ void oneBindingMode(){
   }
 }
 
+void printNegPrbMode(){
+  ScopedPtr<Problem> prb(UIHelper::getInputProblem(*env.options));
+  auto units = prb->units();
+  UnitList::Iterator uit(units);
+
+  cout<< "fof(a1,axiom," << endl;
+  while (uit.hasNext()) {
+    auto formula = uit.next()->getFormula();
+    cout<< "~(" << formula->toString() << ")" << ((uit.hasNext())? " | " : "") << endl;
+  }
+  cout<< ")." << endl;
+}
+
 void fragmentClassificationMode(bool sk){
   ScopedPtr<Problem> prb(UIHelper::getInputProblem(*env.options));
 
@@ -756,7 +780,10 @@ int main(int argc, char* argv[])
       break;
     case Options::Mode::FRAGMENT_CLASSIFICATION_SK:
       fragmentClassificationMode(true);
-    break;
+      break;
+    case Options::Mode::NEG_PRB:
+      printNegPrbMode();
+      break;
 
     case Options::Mode::CASC:
       env.options->setIgnoreMissing(Options::IgnoreMissing::WARN);

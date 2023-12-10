@@ -1,5 +1,9 @@
 //
 // Created by Matte on 25/09/2023.
+
+
+// ./Problems/SYO/SYO580+1.p
+// ./Problems/SYO/SYO579+1.p
 //
 
 #include "OneBindingSat.h"
@@ -93,6 +97,11 @@ bool BindingFragments::OneBindingSat::solve(){
       if(g1 && !g2) return true;
       if(g2 && !g1) return false;
       return a->functor() < b->functor();
+
+      // if(a1 == b1) {
+      //   if(g1) return true;
+      //   return false < true;
+      // } else return a1 < b1;
     });
 
     if (_showProof) {
@@ -147,7 +156,7 @@ bool BindingFragments::OneBindingSat::solve(){
     }
 
     if(_showProof) cout<< "||||||||||||||||||||||||||||||||| blocking model |||||||||||||||||||||||||||||||||" << endl;
-    blockModel();
+    blockModel(implicants, l);
   }
 
   if(_showProof) cout<<  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ UNSAT ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
@@ -252,15 +261,30 @@ void BindingFragments::OneBindingSat::printAssignment(){
   }
   cout << endl;
 }
-void BindingFragments::OneBindingSat::blockModel()
-{
+// void BindingFragments::OneBindingSat::blockModel()
+// {
+//   SATLiteralStack blockingClause;
+//   unsigned int max = _sat2fo.maxSATVar();
+//   for (unsigned int j = 1; j <= max; j++) {
+//     if (_solver->getAssignment(j) == SAT::SATSolver::TRUE) {
+//       blockingClause.push(SATLiteral(j, false));
+//     }
+//   }
+//   auto clause = SATClause::fromStack(blockingClause);
+//   if (_showProof)
+//     cout << "Blocking Clause: " << clause->toString() << endl;
+//   _solver->addClause(clause);
+// }
+
+void BindingFragments::OneBindingSat::blockModel(Array<Literal*>& implicants, int size){
   SATLiteralStack blockingClause;
-  unsigned int max = _sat2fo.maxSATVar();
-  for (unsigned int j = 1; j <= max; j++) {
-    if (_solver->getAssignment(j) == SAT::SATSolver::TRUE) {
-      blockingClause.push(SATLiteral(j, false));
-    }
+
+  for(int i = 0; i < size; ++i) {
+    auto impl = implicants[i];
+    auto satImpl = _sat2fo.toSAT(impl);
+    blockingClause.push(satImpl.opposite());
   }
+
   auto clause = SATClause::fromStack(blockingClause);
   if (_showProof)
     cout << "Blocking Clause: " << clause->toString() << endl;
@@ -407,7 +431,7 @@ bool BindingFragments::MaximalUnifiableSubsets::_musV2(Literal* literal, Literal
         isMax = false;
         if(!_musV2(l1, toFree)) return false;
         _s[u] = -1;
-        LiteralList::push(u, fToFree);
+        LiteralList::push(u, toFree);
       }
     }
   }
