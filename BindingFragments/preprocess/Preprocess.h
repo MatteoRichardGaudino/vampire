@@ -30,10 +30,20 @@ public:
   void setClausify(bool clausify) { _clausify = clausify; }
   void setDistributeForall(bool distribute_forall) { _distributeForall = distribute_forall; }
 
+
 private:
   bool _skolemize;
   bool _clausify;
   bool _distributeForall;
+};
+
+
+class PreprocessV2 {
+public:
+  Problem& prb;
+  PreprocessV2(Problem& prb);
+
+  void ennf();
 };
 }
 

@@ -42,9 +42,8 @@ Fragment BindingClassifier::classify(UnitList* units){
 }
 Fragment BindingClassifier::classify(Formula* formula){
   switch (formula->connective()) {
-
     case LITERAL:
-      return UNIVERSAL_ONE_BINDING;
+      return ONE_BINDING;
     case AND:
     case OR: {
       FormulaList::Iterator it(formula->args());
@@ -64,79 +63,93 @@ Fragment BindingClassifier::classify(Formula* formula){
       return classification;
     }
     case NOT: {
-      auto subformula = formula->uarg();
-      if (subformula->connective() == LITERAL)
-        return UNIVERSAL_ONE_BINDING;
-      else
-        return NONE;
+      return ~classify(formula->uarg());
     }
     case FORALL:
     case EXISTS: {
       Formula *subformula = formula;
       Connective connective;
-      bool canBeUniversal = (subformula->connective() == Connective::FORALL);
       do {
         subformula = subformula->qarg();
         connective = subformula->connective();
-        if(connective == EXISTS) canBeUniversal = false;
       } while (connective == FORALL || connective == EXISTS);
 
-      auto classification = _classifyHelper(subformula).fragment;
-      if(!canBeUniversal && classification == UNIVERSAL_ONE_BINDING)
-        classification = ONE_BINDING;
+      auto classification = _innerClassify(subformula).fragment;
       return classification;
     }
     case BOOL_TERM:
     case FALSE:
     case TRUE:
-      return UNIVERSAL_ONE_BINDING;
+      return ONE_BINDING;
+    case IMP: { // A => B === ~A | B
+      NegatedFormula leftOr(formula->left()); // ~A // B === formula->right()
+      return BindingClassification::compare(classify(&leftOr), classify(formula->right()));
+    }
+    case IFF: { // A <=> B === (A => B) & (B => A)
+      BinaryFormula leftAndFormula(IMP, formula->left(), formula->right()); // A => B
+      BinaryFormula rightAndFormula(IMP, formula->right(), formula->left()); // B => A
+
+      return BindingClassification::compare(classify(&leftAndFormula), classify(&rightAndFormula));
+    }
+    case XOR: { // A <~> B === ~(A <=> B)
+      BinaryFormula negXor(IFF, formula->left(), formula->right()); // A <=> B
+      NegatedFormula xorFormula(&negXor); // ~(A <=> B)
+
+      return classify(&xorFormula);
+    }
     default:
-      return NONE;
+      ASSERTION_VIOLATION;
   }
 }
 
-BindingClassification BindingClassifier::_classifyHelper(Formula* formula){
+BindingClassification BindingClassifier::_innerClassify(Formula* formula){
   switch (formula->connective()) {
     case LITERAL:
-      return {UNIVERSAL_ONE_BINDING, formula->literal()};
+      return {ONE_BINDING, formula->literal()};
     case AND:
     case OR:{
       FormulaList::Iterator it(formula->args());
       BindingClassification classification;
       if (it.hasNext()) {
         auto subformula = it.next();
-        classification = _classifyHelper(subformula);
+        classification = _innerClassify(subformula);
         if (!it.hasNext())
           return classification;
       }
       while (it.hasNext()) {
         auto subformula = it.next();
-        classification = BindingClassification::compare(classification, _classifyHelper(subformula), formula->connective());
+        classification = BindingClassification::compare(classification, _innerClassify(subformula), formula->connective());
         if (classification.is(NONE))
           return classification;
       }
       return classification;
     }
     case NOT: {
-      auto subformula = formula->uarg();
-      if (subformula->connective() == LITERAL) {
-        return {UNIVERSAL_ONE_BINDING, subformula->literal()};
-      }
-      else
-        return {NONE, nullptr};
+      return _innerClassify(formula->uarg()).complementary();
     }
     case BOOL_TERM:
     case FALSE:
     case TRUE:
-      return {UNIVERSAL_ONE_BINDING, nullptr};
+      return {ONE_BINDING, nullptr};
+    case IMP:
+    case IFF:
+    case XOR: {
+      const auto classification =
+        BindingClassification::compare(
+          _innerClassify(formula->left()),
+          _innerClassify(formula->right()),
+          formula->connective()
+        );
+      return classification;
+    }
     default:
       return {NONE, nullptr};
   }
 }
 
 
-Literal* BindingClassifier::mostLeftLiteral(Formula* formula){
-  switch (formula->connective()){
+Literal *BindingClassifier::mostLeftLiteral(Formula *formula){
+  switch (formula->connective()) {
     case LITERAL:
       return formula->literal();
     case AND:
@@ -144,6 +157,10 @@ Literal* BindingClassifier::mostLeftLiteral(Formula* formula){
       return mostLeftLiteral(formula->args()->head());
     case NOT:
       return mostLeftLiteral(formula->uarg());
+    case IMP:
+    case IFF:
+    case XOR:
+      return mostLeftLiteral(formula->left());
     default:
       return nullptr;
   }
@@ -163,9 +180,26 @@ Fragment BindingClassification::compare(const Fragment &first, const Fragment &s
   else return second;
 }
 BindingClassification BindingClassification::compare(const BindingClassification &first, const BindingClassification &second, Connective connective){
+  switch (connective) {
+    case IMP:
+      return compare(
+        first.complementary(),
+        second,
+        OR
+      );
+    case IFF:
+      return compare(
+        compare(first, second, IMP),
+        compare(second, first, IMP),
+        AND
+      );
+    case XOR:
+      return compare(first, second, IFF).complementary();
+  }
+
+
   if(first.is(ONE_BINDING) && second.is(ONE_BINDING)){
     if(compareLiteralTerms(first.mostLeftLit, second.mostLeftLit)) {
-      if(first.fragment <= second.fragment) return second; // If one is UNIVERSAL_ONE_BINDING
       return first;
     }
     if(connective == AND)
@@ -185,6 +219,7 @@ BindingClassification BindingClassification::compare(const BindingClassification
 }
 
 bool BindingClassification::compareLiteralTerms(const Literal* first, const Literal* second){
+  if(first == second) return true;
   if(first == nullptr && second == nullptr) return true;
   if(first == nullptr || second == nullptr) return false;
 

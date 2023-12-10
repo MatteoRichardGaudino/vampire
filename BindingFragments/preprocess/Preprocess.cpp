@@ -200,16 +200,14 @@ void BindingFragments::Preprocess::negatedProblem(Problem &prb)
   }
 
   UnitList::DelIterator dIt(units);
-  if(dIt.hasNext()) {
+  if (dIt.hasNext()) {
     dIt.next();
     auto newProb = new FormulaUnit(
-                       (FormulaList::length(axAndConj) != 1)?
-                          new JunctionFormula(OR, axAndConj) :
-                          axAndConj->head(),
-                       FromInput(UnitInputType::CONJECTURE));
+        (FormulaList::length(axAndConj) != 1) ? new JunctionFormula(OR, axAndConj) : axAndConj->head(),
+        FromInput(UnitInputType::CONJECTURE));
     dIt.replace(newProb);
 
-    if(env.options->showPreprocessing()) {
+    if (env.options->showPreprocessing()) {
       env.beginOutput();
       env.out() << "[pp] Negated Problem: " << newProb->toString() << std::endl;
       env.endOutput();
@@ -218,5 +216,28 @@ void BindingFragments::Preprocess::negatedProblem(Problem &prb)
   while (dIt.hasNext()) {
     dIt.next();
     dIt.del();
+  }
+}
+BindingFragments::PreprocessV2::PreprocessV2(Problem &prb) : prb(prb){
+  Kernel::Preprocess(*env.options).preprocess1(prb);
+}
+
+void BindingFragments::PreprocessV2::ennf(){
+  UnitList::DelIterator uit(prb.units());
+  while (uit.hasNext()){
+    auto unit = uit.next();
+    if(unit->isClause()) continue;
+
+    FormulaUnit* fu = static_cast<FormulaUnit*>(unit);
+    FormulaUnit* fu0 = fu;
+
+    // *** ENNF ***
+    fu = NNF::ennf(fu);
+    fu = Flattening::flatten(fu);
+
+    if(fu != fu0){
+      uit.replace(fu);
+    }
+
   }
 }

@@ -211,8 +211,6 @@ Problem *do1BProving(){
   bool canSolve = true;
 
   switch (classification) {
-    case BindingFragments::UNIVERSAL_ONE_BINDING:
-      break;
     case BindingFragments::ONE_BINDING: {
       {
         env.statistics->phase = Statistics::PREPROCESSING;
@@ -523,9 +521,9 @@ void printNegPrbMode(){
 void fragmentClassificationMode(bool sk){
   ScopedPtr<Problem> prb(UIHelper::getInputProblem(*env.options));
 
-  BindingFragments::Preprocess prepro(sk, false, false);
-  prepro.preprocess(*prb);
-  auto classification = BindingFragments::BindingClassifier::classify(prb->units());
+  BindingFragments::PreprocessV2 prepro(*prb);
+
+  const auto classification = BindingFragments::BindingClassifier::classify(prb->units());
 
   env.beginOutput();
   env.out() << endl;

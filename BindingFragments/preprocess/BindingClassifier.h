@@ -14,7 +14,6 @@ using namespace Kernel;
 
 
 enum Fragment{
-  UNIVERSAL_ONE_BINDING = 0,
   ONE_BINDING = 1,
   CONJUNCTIVE_BINDING = 2,
   DISJUNCTIVE_BINDING = 3,
@@ -23,17 +22,32 @@ enum Fragment{
 
 inline vstring fragmentToString(Fragment fragment){
     switch (fragment) {
-    case UNIVERSAL_ONE_BINDING:
-    return "Universal One Binding";
-    case ONE_BINDING:
-    return "One Binding";
-    case CONJUNCTIVE_BINDING:
-    return "Conjunctive Binding";
-    case DISJUNCTIVE_BINDING:
-    return "Disjunctive Binding";
-    case NONE:
-    return "None";
+      case ONE_BINDING:
+        return "One Binding";
+      case CONJUNCTIVE_BINDING:
+        return "Conjunctive Binding";
+      case DISJUNCTIVE_BINDING:
+        return "Disjunctive Binding";
+      default:
+        return "None";
     }
+}
+
+inline Fragment complementaryFragment(Fragment fragment){
+  switch (fragment) {
+    case ONE_BINDING:
+      return ONE_BINDING;
+    case CONJUNCTIVE_BINDING:
+      return DISJUNCTIVE_BINDING;
+    case DISJUNCTIVE_BINDING:
+      return CONJUNCTIVE_BINDING;
+    case NONE:
+      return NONE;
+  }
+}
+
+inline Fragment operator~(Fragment fragment){
+  return complementaryFragment(fragment);
 }
 
 class BindingClassification{
@@ -45,7 +59,11 @@ public:
   BindingClassification(Fragment fragment, Literal *mostLeftLit);
 
   bool is(Fragment fragment1) const{
-    return fragment == fragment1 || (fragment1 == ONE_BINDING && fragment == UNIVERSAL_ONE_BINDING);
+    return fragment == fragment1;
+  }
+
+  BindingClassification complementary() const {
+    return {complementaryFragment(fragment), mostLeftLit};
   }
 
   static Fragment compare(const Fragment &first, const Fragment &second);
@@ -61,7 +79,7 @@ public:
 
   static Literal* mostLeftLiteral(Formula* formula);
 private:
-  static BindingClassification _classifyHelper(Formula* formula);
+  static BindingClassification _innerClassify(Formula* formula);
 };
 
 }
