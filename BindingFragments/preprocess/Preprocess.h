@@ -5,7 +5,9 @@
 #ifndef VAMPIRE_PREPROCESS_H
 #define VAMPIRE_PREPROCESS_H
 
+#include "BindingClassifier.h"
 #include "../../Kernel/Unit.hpp"
+#include "../../Lib/DHMap.hpp"
 
 using namespace Kernel;
 
@@ -37,13 +39,38 @@ private:
   bool _distributeForall;
 };
 
+typedef DHMap<Literal*, std::pair<Literal*, SAT::SATClauseStack*>> BindingMap;
 
 class PreprocessV2 {
 public:
-  Problem& prb;
-  PreprocessV2(Problem& prb);
+  Problem &prb;
+  Fragment fragment;
+
+  explicit PreprocessV2(Problem& prb, Fragment fragment);
 
   void ennf();
+  void topBooleanFormulaAndBindings();
+  void naming();
+  void nnf();
+  void skolemize();
+  void distributeForall();
+
+  std::pair<Literal*, SAT::SATClauseStack*> getBinding(Literal* literal);
+  void printBindings();
+
+private:
+  BindingMap _bindings;
+  unsigned _maxBindingVarNo = 0;
+  int _bindingCount;
+
+  Formula* _newBinding(Literal* literal);
+  Formula* _newBinding(Formula* formula);
+
+  SAT::SATClauseStack* _clausifyBindingFormula(FormulaUnit* formula);
+
+  Literal* _newBindingLiteral();
+
+  Formula* _topBooleanFormula(Formula* formula);
 };
 }
 

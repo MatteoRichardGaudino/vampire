@@ -157,6 +157,9 @@ Literal *BindingClassifier::mostLeftLiteral(Formula *formula){
       return mostLeftLiteral(formula->args()->head());
     case NOT:
       return mostLeftLiteral(formula->uarg());
+    case FORALL:
+    case EXISTS:
+      return mostLeftLiteral(formula->qarg());
     case IMP:
     case IFF:
     case XOR:

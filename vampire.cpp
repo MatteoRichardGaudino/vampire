@@ -184,7 +184,31 @@ Problem *doProving()
 VWARN_UNUSED
 Problem *do1BProving(){
   Problem* prb = UIHelper::getInputProblem(*env.options);
-  //bool containsConjecture = UIHelper::haveConjecture();
+  BindingFragments::Fragment fragment = BindingFragments::BindingClassifier::classify(prb->units());
+
+  BindingFragments::PreprocessV2 preprov2(*prb, fragment);
+
+  cout<< "-------- INPUT --------" << endl;
+  UnitList::Iterator uit2(prb->units());
+  while (uit2.hasNext()) {
+    cout<< uit2.next()->toString() << endl;
+  }
+
+  preprov2.ennf();
+  preprov2.topBooleanFormulaAndBindings();
+  // preprov2.naming();
+  //preprov2.nnf();
+
+  cout<< "-------- OUT --------" << endl;
+  uit2.reset(prb->units());
+  while (uit2.hasNext()) {
+    cout<< uit2.next()->toString() << endl;
+  }
+  cout<< "-------- BINDINGS --------" << endl;
+  preprov2.printBindings();
+
+  return prb;
+
 
   BindingFragments::Preprocess prepro(false, false, false);
   {
@@ -521,7 +545,7 @@ void printNegPrbMode(){
 void fragmentClassificationMode(bool sk){
   ScopedPtr<Problem> prb(UIHelper::getInputProblem(*env.options));
 
-  BindingFragments::PreprocessV2 prepro(*prb);
+  BindingFragments::PreprocessV2 prepro(*prb, BindingFragments::NONE);
 
   const auto classification = BindingFragments::BindingClassifier::classify(prb->units());
 

@@ -509,7 +509,7 @@ void BindingFragments::OneBindingSat::_addBinding(Literal* literal, Formula *for
     for(int i = 0; i < size; i++){
       const auto lit = (*clause)[i];
       (*satClause)[i] = SATLiteral(lit->functor(), lit->polarity());
-      if(literal->functor() > _maxBindingVarNo) _maxBindingVarNo = literal->functor();
+      if(lit->functor() > _maxBindingVarNo) _maxBindingVarNo = lit->functor();
     }
     satStk->push(satClause);
   }
