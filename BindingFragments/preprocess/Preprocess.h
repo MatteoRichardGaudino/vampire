@@ -123,38 +123,54 @@ public:
 
 
   void printBindingFormulas(){
-    std::cout << "======== Binding Formulas ========" << std::endl;
+    if(!env.options->showPreprocessing()) return;
+
+    env.beginOutput();
+    env.out() << "======== Binding Formulas ========" << std::endl;
     auto it = _bindingFormulas.items();
     while (it.hasNext()) {
       auto item = it.next();
-      std::cout << item.first->toString() << " => " << item.second->toString() << std::endl;
+      env.out() << item.first->toString() << " => " << item.second->toString() << std::endl;
     }
-    std::cout << "======== End Binding Formulas ========" << std::endl;
+    env.out() << "======== End Binding Formulas ========" << std::endl;
+    env.endOutput();
   }
 
   void printLiteralToBooleanBindings(){
-    std::cout << "======== Literal Bindings to Boolean Bindings ========" << std::endl;
+    if(!env.options->showPreprocessing()) return;
+
+    env.beginOutput();
+
+    env.out() << "======== Literal Bindings to Boolean Bindings ========" << std::endl;
     auto it = _literalToBooleanBindings.items();
     while (it.hasNext()) {
       auto item = it.next();
-      std::cout << item.first->toString() << " => " << item.second->toString() << std::endl;
+      env.out() << item.first->toString() << " => " << item.second->toString() << std::endl;
     }
-    std::cout << "======== End Literal Bindings to Boolean Bindings ========" << std::endl;
+    env.out() << "======== End Literal Bindings to Boolean Bindings ========" << std::endl;
+    env.endOutput();
+
   }
 
   void printBooleanToLiteralBindings(){
-    std::cout << "======== Boolean to Literal Bindings ========" << std::endl;
+    if(!env.options->showPreprocessing()) return;
+
+    env.beginOutput();
+
+    env.out() << "======== Boolean to Literal Bindings ========" << std::endl;
     auto it = _booleanToLiteralBindings.items();
     while (it.hasNext()) {
       auto item = it.next();
-      std::cout << item.first->toString() << " => [";
+      env.out() << item.first->toString() << " => [";
       LiteralList::Iterator lbIt(item.second);
       while (lbIt.hasNext()) {
-        std::cout << lbIt.next()->toString() << (lbIt.hasNext()? ", " : "");
+        env.out() << lbIt.next()->toString() << (lbIt.hasNext()? ", " : "");
       }
-      std::cout << "]" << std::endl;
+      env.out() << "]" << std::endl;
     }
-    std::cout << "======== End Boolean to Literal Bindings ========" << std::endl;
+    env.out() << "======== End Boolean to Literal Bindings ========" << std::endl;
+    env.endOutput();
+
   }
 private:
   BindingFormulaMap _bindingFormulas;
@@ -176,7 +192,7 @@ private:
 
 
   unsigned _maxBindingVarNo = 0;
-  int _bindingCount;
+  int _bindingCount = 0;
   int _minBooleanBindingFunctor = -1;
   int _maxBooleanBindingFunctor = 0;
 
