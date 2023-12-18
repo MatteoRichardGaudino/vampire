@@ -181,103 +181,55 @@ Problem *doProving()
   ProvingHelper::runVampireSaturation(*prb, *env.options);
   return prb;
 }
+
 VWARN_UNUSED
 Problem *do1BProving(){
   Problem* prb = UIHelper::getInputProblem(*env.options);
-  BindingFragments::Fragment fragment = BindingFragments::BindingClassifier::classify(prb->units());
-
-  BindingFragments::PreprocessV2 preprov2(*prb, fragment);
-
-  cout<< "-------- INPUT --------" << endl;
-  UnitList::Iterator uit2(prb->units());
-  while (uit2.hasNext()) {
-    cout<< uit2.next()->toString() << endl;
-  }
-
-  preprov2.ennf();
-  preprov2.topBooleanFormulaAndBindings();
-  // preprov2.naming();
-  //preprov2.nnf();
-
-  cout<< "-------- OUT --------" << endl;
-  uit2.reset(prb->units());
-  while (uit2.hasNext()) {
-    cout<< uit2.next()->toString() << endl;
-  }
-  cout<< "-------- BINDINGS --------" << endl;
-  preprov2.printBindings();
-
-  return prb;
-
-
-  BindingFragments::Preprocess prepro(false, false, false);
-  {
-    env.statistics->phase = Statistics::PREPROCESSING;
-    TIME_TRACE(TimeTrace::PREPROCESSING)
-    prepro.preprocess(*prb);
-  }
-
-  // Check if the formula is $false or $true
-  auto units = prb->units();
-  if(UnitList::length(units) == 1) {
-    auto formula = units->head()->getFormula();
-    if(formula->connective() == TRUE || formula->connective() == FALSE) {
-      env.statistics->terminationReason = (formula->connective() == TRUE)? Statistics::SATISFIABLE : Statistics::REFUTATION;
-      env.options->setProof(Options::Proof::OFF);
-      return prb;
-    }
-  }
-  // -------
 
   env.statistics->phase = Statistics::CLASSIFY;
   auto classification = BindingFragments::BindingClassifier::classify(prb->units());
 
-  bool canSolve = true;
-
-  switch (classification) {
-    case BindingFragments::ONE_BINDING: {
-      {
-        env.statistics->phase = Statistics::PREPROCESSING;
-        TIME_TRACE(TimeTrace::PREPROCESSING)
-        prepro.setSkolemize(true);
-        prepro.preprocess(*prb);
-      }
-    }
-    break;
-    case BindingFragments::CONJUNCTIVE_BINDING: {
-      env.statistics->phase = Statistics::PREPROCESSING;
-      TIME_TRACE(TimeTrace::PREPROCESSING)
-      prepro.setSkolemize(true);
-      prepro.setDistributeForall(true);
-      prepro.preprocess(*prb);
-
-    }
-      break;
-    case BindingFragments::DISJUNCTIVE_BINDING: {
-      // if(containsConjecture) {
-      //   TIME_TRACE(TimeTrace::PREPROCESSING)
-      //   prepro.negatedProblem(*prb);
-      //   prepro.setSkolemize(true);
-      //   prepro.setDistributeForall(true);
-      //   prepro.preprocess(*prb);
-      // } else {
-        canSolve = false;
-      // }
-    }
-    break;
-    case BindingFragments::NONE:
-      canSolve = false;
-      break;
-  }
-
+  bool canSolve = classification < BindingFragments::DISJUNCTIVE_BINDING;
   if(!canSolve) {
-    cout<< "Can't solve this fragment: " << BindingFragments::fragmentToString(classification) << endl;
-      env.statistics->terminationReason = Statistics::INAPPROPRIATE;
-      env.statistics->refutation = 0;
+    env.beginOutput();
+    env.out() << "Can't solve this fragment: " << fragmentToString(classification) << endl;
+    env.endOutput();
+    env.statistics->terminationReason = Statistics::INAPPROPRIATE;
+    env.statistics->refutation = 0;
     return prb;
   }
 
-  bool solution = BindingFragments::ProvingHelper::run1BSatAlgorithm(*prb, *env.options);
+  BindingFragments::PreprocessV2 preprov2(*prb, classification);
+  {
+    env.statistics->phase = Statistics::PREPROCESSING;
+    TIME_TRACE(TimeTrace::PREPROCESSING)
+
+    // Check if the formula is $false or $true
+    auto units = prb->units();
+    if(UnitList::length(units) == 1) {
+        auto formula = units->head()->getFormula();
+        if(formula->connective() == TRUE || formula->connective() == FALSE) {
+          env.statistics->terminationReason = (formula->connective() == TRUE)? Statistics::SATISFIABLE : Statistics::REFUTATION;
+          env.options->setProof(Options::Proof::OFF);
+          return prb;
+        }
+      }
+
+    preprov2.ennf();
+    preprov2.topBooleanFormulaAndBindings();
+    preprov2.printBindingFormulas();
+    preprov2.naming();
+    preprov2.nnf();
+    preprov2.printLiteralToBooleanBindings();
+    preprov2.printBooleanToLiteralBindings();
+    preprov2.satClausify();
+
+    // preprov2.printBindings();
+    // preprov2.printSatClauses();
+  }
+  ///////////////////////////////////////
+
+  bool solution = BindingFragments::ProvingHelper::run1BSatAlgorithm(preprov2);
   env.statistics->terminationReason = (solution)? Statistics::SATISFIABLE : Statistics::REFUTATION;
   env.options->setProof(Options::Proof::OFF);
 

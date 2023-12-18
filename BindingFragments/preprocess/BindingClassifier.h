@@ -78,8 +78,7 @@ public:
   static Fragment classify(Formula* formula);
 
   static Literal* mostLeftLiteral(Formula* formula);
-private:
-  static BindingClassification _innerClassify(Formula* formula);
+  static BindingClassification innerClassify(Formula* formula);
 };
 
 }

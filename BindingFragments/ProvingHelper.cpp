@@ -3,13 +3,15 @@
 //
 
 #include "ProvingHelper.h"
+
+#include "OneBindingAlgorithm.h"
 #include "Kernel/Clause.hpp"
 #include "OneBindingSat.h"
 
 
-bool BindingFragments::ProvingHelper::run1BSatAlgorithm(Problem &prb, const Options &opt){
+bool BindingFragments::ProvingHelper::run1BSatAlgorithm(PreprocessV2& prp){
   // TODO
-  OneBindingSat sat(prb, opt);
+  OneBindingAlgorithm sat(prp);
   return sat.solve();
 }
 

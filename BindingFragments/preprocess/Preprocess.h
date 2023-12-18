@@ -8,6 +8,8 @@
 #include "BindingClassifier.h"
 #include "../../Kernel/Unit.hpp"
 #include "../../Lib/DHMap.hpp"
+#include "SAT/SAT2FO.hpp"
+#include "SAT/SATLiteral.hpp"
 
 using namespace Kernel;
 
@@ -39,39 +41,165 @@ private:
   bool _distributeForall;
 };
 
-typedef DHMap<Literal*, std::pair<Literal*, SAT::SATClauseStack*>> BindingMap;
+typedef DHMap<Literal*, Formula*> BindingFormulaMap;
+
+typedef DHMap<Literal*, LiteralList*> BooleanToLiteralBindingMap;
+typedef DHMap<Literal*, Literal*> LiteralToBooleanBindingMap;
+
+typedef DHMap<Literal*, SAT::SATClauseStack*> BindingClauseMap;
 
 class PreprocessV2 {
 public:
   Problem &prb;
   Fragment fragment;
 
+  bool emptyClauseFound = false;
+
   explicit PreprocessV2(Problem& prb, Fragment fragment);
 
+
+  // Top Boolean Formula pre-processing
   void ennf();
   void topBooleanFormulaAndBindings();
   void naming();
   void nnf();
-  void skolemize();
-  void distributeForall();
+  //void skolemize(); // se si eseguono le funzione in ordine skolemize non serve visto che la formula e' ground
+  // void distributeForall();
+  //void clausify();
+  void satClausify();
 
-  std::pair<Literal*, SAT::SATClauseStack*> getBinding(Literal* literal);
-  void printBindings();
+  // Binding pre-processing
 
+
+
+
+
+  // void printBindings();
+  void printSatClauses();
+
+
+  SAT::SATLiteral toSAT(Literal* literal){
+    return _sat2fo.toSAT(literal);
+  }
+
+  unsigned maxSatVar(){
+    return _sat2fo.maxSATVar();
+  }
+  unsigned maxBindingVarNo(){
+    return _maxBindingVarNo;
+  }
+  bool isGround(){
+    return _bindingCount == 0;
+  }
+
+  SAT::SATClauseStack* satClauses(){
+    return &_clauses;
+  }
+  LiteralList *literals(){
+    return _literals;
+  }
+
+  SAT::SATClauseStack* getSatClauses(Literal* literal){
+    ASS(!isBooleanBinding(literal))
+    return _bindingClauses.get(literal);
+  }
+
+  Literal* getBooleanBinding(Literal* literalBinding){
+    ASS(isBindingLiteral(literalBinding))
+    return _literalToBooleanBindings.get(literalBinding);
+  }
+
+  LiteralList* getLiteralBindings(Literal* booleanBinding){
+    ASS(isBooleanBinding(booleanBinding))
+    return _booleanToLiteralBindings.get(booleanBinding);
+  }
+
+  bool isBooleanBinding(Literal* literal) const{
+    return literal->functor() >= _minBooleanBindingFunctor && literal->functor() <= _maxBooleanBindingFunctor;
+  }
+  bool isBindingLiteral(Literal* literal) const{
+    return literal->functor() >= _minLiteralBindingFunctor && literal->functor() <= _maxLiteralBindingFunctor;
+  }
+
+
+  void printBindingFormulas(){
+    std::cout << "======== Binding Formulas ========" << std::endl;
+    auto it = _bindingFormulas.items();
+    while (it.hasNext()) {
+      auto item = it.next();
+      std::cout << item.first->toString() << " => " << item.second->toString() << std::endl;
+    }
+    std::cout << "======== End Binding Formulas ========" << std::endl;
+  }
+
+  void printLiteralToBooleanBindings(){
+    std::cout << "======== Literal Bindings to Boolean Bindings ========" << std::endl;
+    auto it = _literalToBooleanBindings.items();
+    while (it.hasNext()) {
+      auto item = it.next();
+      std::cout << item.first->toString() << " => " << item.second->toString() << std::endl;
+    }
+    std::cout << "======== End Literal Bindings to Boolean Bindings ========" << std::endl;
+  }
+
+  void printBooleanToLiteralBindings(){
+    std::cout << "======== Boolean to Literal Bindings ========" << std::endl;
+    auto it = _booleanToLiteralBindings.items();
+    while (it.hasNext()) {
+      auto item = it.next();
+      std::cout << item.first->toString() << " => [";
+      LiteralList::Iterator lbIt(item.second);
+      while (lbIt.hasNext()) {
+        std::cout << lbIt.next()->toString() << (lbIt.hasNext()? ", " : "");
+      }
+      std::cout << "]" << std::endl;
+    }
+    std::cout << "======== End Boolean to Literal Bindings ========" << std::endl;
+  }
 private:
-  BindingMap _bindings;
+  BindingFormulaMap _bindingFormulas;
+
+  BooleanToLiteralBindingMap _booleanToLiteralBindings;
+  LiteralToBooleanBindingMap _literalToBooleanBindings;
+
+  BindingClauseMap _bindingClauses;
+
+  // return a new literal with arity 0
+  Literal *_newBooleanBinding();
+  // return a new literal with same terms and arity of literal
+  Literal *_newBindingLiteral(Literal *literal);
+  // return an atomicFormula containing a new booleanBinding ($bx) and add ($bx => formula) to _bindingFormulas
+  Formula *_addBindingFormula(Formula *formula);
+
+
+
+
+
   unsigned _maxBindingVarNo = 0;
   int _bindingCount;
+  int _minBooleanBindingFunctor = -1;
+  int _maxBooleanBindingFunctor = 0;
 
-  Formula* _newBinding(Literal* literal);
-  Formula* _newBinding(Formula* formula);
+  int _minLiteralBindingFunctor = -1;
+  int _maxLiteralBindingFunctor = 0;
+
+
+
+
+  SAT::SAT2FO _sat2fo;
+  SAT::SATClauseStack _clauses;
+  LiteralList* _literals = LiteralList::empty();
+
+  void _addLiterals(Clause* clause);
+
+
+  SAT::SATClauseStack* _getSingleLiteralClause(Literal* literal);
+  // Formula* _newBinding(Literal* literal);
+  // Formula* _newBinding(Formula* formula);
 
   SAT::SATClauseStack* _clausifyBindingFormula(FormulaUnit* formula);
-
-  Literal* _newBindingLiteral();
 
   Formula* _topBooleanFormula(Formula* formula);
 };
 }
-
 #endif // VAMPIRE_PREPROCESS_H

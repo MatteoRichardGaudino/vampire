@@ -74,7 +74,7 @@ Fragment BindingClassifier::classify(Formula* formula){
         connective = subformula->connective();
       } while (connective == FORALL || connective == EXISTS);
 
-      auto classification = _innerClassify(subformula).fragment;
+      auto classification = innerClassify(subformula).fragment;
       return classification;
     }
     case BOOL_TERM:
@@ -102,7 +102,7 @@ Fragment BindingClassifier::classify(Formula* formula){
   }
 }
 
-BindingClassification BindingClassifier::_innerClassify(Formula* formula){
+BindingClassification BindingClassifier::innerClassify(Formula* formula){
   switch (formula->connective()) {
     case LITERAL:
       return {ONE_BINDING, formula->literal()};
@@ -112,20 +112,20 @@ BindingClassification BindingClassifier::_innerClassify(Formula* formula){
       BindingClassification classification;
       if (it.hasNext()) {
         auto subformula = it.next();
-        classification = _innerClassify(subformula);
+        classification = innerClassify(subformula);
         if (!it.hasNext())
           return classification;
       }
       while (it.hasNext()) {
         auto subformula = it.next();
-        classification = BindingClassification::compare(classification, _innerClassify(subformula), formula->connective());
+        classification = BindingClassification::compare(classification, innerClassify(subformula), formula->connective());
         if (classification.is(NONE))
           return classification;
       }
       return classification;
     }
     case NOT: {
-      return _innerClassify(formula->uarg()).complementary();
+      return innerClassify(formula->uarg()).complementary();
     }
     case BOOL_TERM:
     case FALSE:
@@ -136,8 +136,8 @@ BindingClassification BindingClassifier::_innerClassify(Formula* formula){
     case XOR: {
       const auto classification =
         BindingClassification::compare(
-          _innerClassify(formula->left()),
-          _innerClassify(formula->right()),
+          innerClassify(formula->left()),
+          innerClassify(formula->right()),
           formula->connective()
         );
       return classification;

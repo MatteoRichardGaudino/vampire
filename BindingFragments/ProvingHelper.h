@@ -6,6 +6,7 @@
 #define VAMPIRE_PROVINGHELPER_H
 
 #include "Kernel/Formula.hpp"
+#include "preprocess/Preprocess.h"
 
 namespace BindingFragments{
 using namespace Kernel;
@@ -13,7 +14,7 @@ using namespace Shell;
 
 class ProvingHelper {
 public:
-  static bool run1BSatAlgorithm(Problem& prb, const Options& opt);
+  static bool run1BSatAlgorithm(PreprocessV2& prp);
 };
 }
 

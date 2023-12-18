@@ -223,6 +223,7 @@ Formula *BindingFragments::OneBindingSat::generateSatFormula(Formula *formula){
       ASSERTION_VIOLATION; // TODO
   }
 }
+
 void BindingFragments::OneBindingSat::setupSolver(){
   _solver = _newSatSolver();
   //ClauseStack::Iterator cIt(*_satClauses);
@@ -230,9 +231,9 @@ void BindingFragments::OneBindingSat::setupSolver(){
   int i = 0;
   while (!_satClauses->isEmpty()){
     auto clause = _satClauses->pop();
-    auto satClause = _sat2fo.toSAT(clause);
+    auto satClause = _sat2fo.toSAT(clause); // TODO e la clausola vuota?
     if(satClause == nullptr){
-      if(_showProof) cout<< "Skipping: " << clause->toString() << endl; // Todo da controllare. e' null solo se la clausola e' true? e se e' false?
+      if(_showProof) cout<< "Skipping: " << clause->toString() << endl;
       continue;
     }
 //    cout<< "Clause: " << clause->toString() << endl;
@@ -249,6 +250,7 @@ void BindingFragments::OneBindingSat::setupSolver(){
     _solver->addClause(clause);
   }
 }
+
 void BindingFragments::OneBindingSat::printAssignment(){
   cout<< "Assignment[(satVar, literal, value)]: ";
   unsigned int max = _sat2fo.maxSATVar();
@@ -471,7 +473,10 @@ void BindingFragments::MaximalUnifiableSubsets::_sReplace(int a, int b){
     }
   }
 }
-
+struct SatStkLeafData : public SubstitutionTree::LeafData {
+  SATClauseStack* stk;
+  SatStkLeafData(SATClauseStack* stk, Literal* lit) : LeafData(nullptr, lit), stk(stk) {}
+};
 void BindingFragments::MaximalUnifiableSubsets::_buildTree(){
   while (_group.hasNext()){
     auto lit = _group.next();
@@ -479,6 +484,8 @@ void BindingFragments::MaximalUnifiableSubsets::_buildTree(){
   }
   _group.reset();
 }
+
+
 
 
 

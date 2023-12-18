@@ -779,6 +779,8 @@ set(VAMPIRE_SOURCES
         BindingFragments/preprocess/Preprocess.h
         BindingFragments/preprocess/ForallAnd.cpp
         BindingFragments/preprocess/ForallAnd.h
+        BindingFragments/OneBindingAlgorithm.cpp
+        BindingFragments/OneBindingAlgorithm.h
 )
 
 ################################################################
