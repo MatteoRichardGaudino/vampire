@@ -18,6 +18,7 @@
 #include "../../Shell/Naming.hpp"
 #include "SAT/MinisatInterfacing.hpp"
 #include "BindingClassifier.h"
+#include "Debug/RuntimeStatistics.hpp"
 #include "Kernel/SubformulaIterator.hpp"
 
 using namespace std;
@@ -573,6 +574,7 @@ void BindingFragments::PreprocessV2::printSatClauses()
 Literal *BindingFragments::PreprocessV2::_newBooleanBinding()
 {
   _bindingCount++;
+  RSTAT_CTR_INC("bindings");
   unsigned booleanBindingFunctor = env.signature->addFreshPredicate(0, "$b");
 
   if (_minBooleanBindingFunctor == -1)

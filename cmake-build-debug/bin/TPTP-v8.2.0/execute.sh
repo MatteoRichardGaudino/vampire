@@ -2,8 +2,9 @@
 inFile=fof_classification.txt
 mode=1b
 # One_Binding, Conjunctive_Binding
-fragment="One_Binding"
+fragment="Conjunctive_Binding"
 prefix="fof_"
+suffix="3"
 
 while read line
 do
@@ -24,7 +25,7 @@ do
   echo Launching $problem
   res=$(../vampire_dbg_master_6837 --mode $mode -sa otter --input_syntax tptp -t 5m -m 8000 --show_preprocessing false -p off -tstat on $path)
   #echo "$res"
-  mkdir -p "$prefix$mode/$fragment"
-  echo "$res" > "$prefix$mode/$fragment/$problem.out"
+  mkdir -p "$prefix$mode$suffix/$fragment"
+  echo "$res" > "$prefix$mode$suffix/$fragment/$problem.out"
   echo "End of $problem"
 done<$inFile

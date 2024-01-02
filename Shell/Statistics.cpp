@@ -453,6 +453,28 @@ void Statistics::print(ostream& out)
   out << "Time elapsed: ";
   Timer::printMSString(out,env.timer->elapsedMilliseconds());
   out << endl;
+
+  if(minTimePerModel) {
+    addCommentSignForSZS(out);
+    out << "Minimal time per model: ";
+    Timer::printMSString(out,minTimePerModel);
+    out << endl;
+  }
+
+  if(maxTimePerModel) {
+    addCommentSignForSZS(out);
+    out << "Maximal time per model: ";
+    Timer::printMSString(out,maxTimePerModel);
+    out << endl;
+  }
+
+  if(avgTimePerModel) {
+    addCommentSignForSZS(out);
+    out << "Average time per model: ";
+    Timer::printMSString(out,avgTimePerModel);
+    out << endl;
+  }
+
   
   unsigned instr = Timer::elapsedMegaInstructions();
   if (instr) {

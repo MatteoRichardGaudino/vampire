@@ -333,7 +333,7 @@ bool BindingFragments::MaximalUnifiableSubsets::_groundLiteralMus(Literal *liter
     }
   }
   bool res = _fun(_solution);
-  _solution.reset();
+  if(res) _solution.reset();
   return res;
 }
 bool BindingFragments::MaximalUnifiableSubsets::mus(Literal *literal){
@@ -466,17 +466,82 @@ void BindingFragments::MaximalUnifiableSubsets::_buildSolution()
       _solution.push(_.first);
   }
 }
-void BindingFragments::MaximalUnifiableSubsets::_sReplace(int a, int b){
+void BindingFragments::MaximalUnifiableSubsets::_sReplace(int a, int b)
+{
   for (auto &_ : _s) {
     if (_.second == a) {
       _s[_.first] = b;
     }
   }
 }
-struct SatStkLeafData : public SubstitutionTree::LeafData {
-  SATClauseStack* stk;
-  SatStkLeafData(SATClauseStack* stk, Literal* lit) : LeafData(nullptr, lit), stk(stk) {}
-};
+
+bool BindingFragments::GroundArityAndTermComparator(Literal *&l1, Literal *&l2)
+{
+  ASS(l1->shared());
+  ASS(l2->shared());
+
+  if(l1 == l2) return false;
+
+  if (l1->arity() != l2->arity())
+    return l1->arity() < l2->arity();
+  if (l1->ground() && !l2->ground())
+    return true;
+  if (!l1->ground() && l2->ground())
+    return false;
+
+  // ASS_EQ(l1->arity(), l2->arity())
+  // ASS((l1->ground() && l2->ground()) != (!l1->ground() && !l2->ground()))
+
+  SubtermIterator sit1(l1);
+  SubtermIterator sit2(l2);
+  while (sit1.hasNext()) {
+    ALWAYS(sit2.hasNext());
+    TermList st1 = sit1.next();
+    TermList st2 = sit2.next();
+    if (st1.isTerm()) {
+      if (st2.isTerm()) {
+        unsigned f1 = st1.term()->functor();
+        unsigned f2 = st2.term()->functor();
+        if (f1 != f2) {
+          return f1 < f2;
+        }
+      }
+      else {
+        return true;
+      }
+    }
+    else {
+      if (st2.isTerm()) {
+        return true;
+      }
+      else {
+        if (st1.var() != st2.var()) {
+          return st1.var() < st2.var();
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+bool BindingFragments::GroundAndArityComparator(Literal *&l1, Literal *&l2){
+  ASS(l1->shared());
+  ASS(l2->shared());
+
+  if(l1 == l2) return false;
+
+  if (l1->arity() != l2->arity())
+    return l1->arity() < l2->arity();
+  if (l1->ground() && !l2->ground())
+    return true;
+  if (!l1->ground() && l2->ground())
+    return false;
+
+  return l1->functor() < l2->functor();
+}
+
+
 void BindingFragments::MaximalUnifiableSubsets::_buildTree(){
   while (_group.hasNext()){
     auto lit = _group.next();

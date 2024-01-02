@@ -10,6 +10,7 @@
 #include "SAT/SAT2FO.hpp"
 #include "SAT/SATSolver.hpp"
 #include "Indexing/SubstitutionTree.hpp"
+#include "Kernel/LiteralComparators.hpp"
 
 #include "preprocess/BindingClassifier.h"
 
@@ -74,6 +75,9 @@ public:
   bool musV2(Literal* literal);
   bool _musV2(Literal* literal, LiteralList*& fToFree);
 
+  LiteralStack* getSolution(){
+    return &_solution;
+  }
 
 private:
   ArityGroupIterator::GroupIterator _group;
@@ -89,6 +93,9 @@ private:
   void _buildSolution();
   void _sReplace(int a, int b);
 };
+
+bool GroundArityAndTermComparator(Literal *&l1, Literal *&l2);
+bool GroundAndArityComparator(Literal *&l1, Literal *&l2);
 
 class OneBindingSat {
   public:

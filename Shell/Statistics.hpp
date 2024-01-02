@@ -280,6 +280,11 @@ public:
   /** Number of pure variables eliminated by SAT solver */
   unsigned satPureVarsEliminated;
 
+  // OneBinding Algorithm statistics
+  unsigned minTimePerModel = 0;
+  unsigned maxTimePerModel = 0;
+  unsigned avgTimePerModel = 0;
+
   /** termination reason */
   enum TerminationReason {
     /** refutation found */

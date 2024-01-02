@@ -30,6 +30,7 @@ private:
   unsigned _implicants(Array<Literal*>& implicants);
   void blockModel(Array<Literal*>& implicants, unsigned size);
 
+  void blockModel(LiteralStack* implicants);
 };
 
 } // BindingFragments

@@ -5,6 +5,9 @@
 #include "OneBindingAlgorithm.h"
 
 #include "OneBindingSat.h"
+#include "Debug/RuntimeStatistics.hpp"
+#include "Lib/Timer.hpp"
+#include "Shell/Statistics.hpp"
 
 #include <SAT/MinisatInterfacing.hpp>
 
@@ -23,41 +26,38 @@ bool OneBindingAlgorithm::solve(){
   TIME_TRACE(TimeTrace::ONE_BINDING_ALGORITHM)
 
   if(_prp.emptyClauseFound) {
-    if(_showProof)
+    if(_showProof) {
       env.out() << "Empty clause found" << std::endl;
+      env.endOutput();
+    }
     return false;
   }
   if(_prp.isGround()) {
-    if(_showProof)
+    if(_showProof) {
       env.out() << "Problem is ground" << std::endl;
-    return _solver->solve() == SATSolver::SATISFIABLE;
+      env.endOutput();
+    }
+    auto res = _solver->solve() == SATSolver::SATISFIABLE;
+    if(res) RSTAT_CTR_INC("boolean models");
+    return res;
   }
 
 
   if (_showProof) env.out() << "-------------------- Solve --------------------------" << std::endl;
+  unsigned avgTimePerModel = 0;
+  unsigned modelCount = 0;
   while (_solver->solve() == SATSolver::SATISFIABLE){
-    // if(_showProof) printAssignment(); // TODO
+    RSTAT_CTR_INC("boolean models");
+    modelCount++;
+    auto start = env.timer->elapsedMilliseconds();
 
     bool RESULT = true;
 
     Array<Literal*> implicants;
     unsigned l = _implicants(implicants);
 
-    std::sort(implicants.begin(), implicants.begin()+l, [](Literal* a, Literal* b) {
-      const auto a1 = a->arity(), b1 = b->arity();
-      const auto g1 = a->ground(), g2 = b->ground();
 
-      if(a1 < b1) return true;
-      if(a1 > b1) return false;
-      if(g1 && !g2) return true;
-      if(g2 && !g1) return false;
-      return a->functor() < b->functor();
-
-      // if(a1 == b1) {
-      //   if(g1) return true;
-      //   return false < true;
-      // } else return a1 < b1;
-    });
+    std::sort(implicants.begin(), implicants.begin()+l, GroundArityAndTermComparator);
 
     if (_showProof) {
       env.out() << "Implicants ordered by arity: " << std::endl;
@@ -101,12 +101,25 @@ bool OneBindingAlgorithm::solve(){
         bool res = mus.musV2(lit);
         if(!res){
           RESULT = false;
+          blockModel(mus.getSolution());
           break;
         }
       }
     }
 
+    auto end = env.timer->elapsedMilliseconds();
+
+    if(env.statistics->maxTimePerModel == 0 || end - start > env.statistics->maxTimePerModel) {
+      env.statistics->maxTimePerModel = end - start;
+    }
+    if(env.statistics->minTimePerModel == 0 || end - start < env.statistics->minTimePerModel) {
+      env.statistics->minTimePerModel = end - start;
+    }
+
+    avgTimePerModel += (end - start);
+
     if(RESULT){
+      env.statistics->avgTimePerModel = avgTimePerModel / modelCount;
       if(_showProof) {
         env.out() <<  "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& SAT &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << std::endl;
         env.endOutput();
@@ -114,15 +127,15 @@ bool OneBindingAlgorithm::solve(){
       return true;
     }
 
-    if(_showProof) env.out() << "||||||||||||||||||||||||||||||||| blocking model |||||||||||||||||||||||||||||||||" << std::endl;
-    blockModel(implicants, l);
+    //blockModel(implicants, l);
+  }
+  env.statistics->avgTimePerModel = avgTimePerModel / modelCount;
+  if(_showProof) {
+    env.out() <<  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ UNSAT ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
+    env.endOutput();
   }
 
-  if(_showProof) env.out() <<  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ UNSAT ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
-
-  if(_showProof) env.endOutput();
   return false;
-
 }
 
 
@@ -184,18 +197,38 @@ unsigned OneBindingAlgorithm::_implicants(Array<Literal*> &implicants){
   return l;
 }
 
-void OneBindingAlgorithm::blockModel(Array<Literal*>& implicants, unsigned size){
+void OneBindingAlgorithm::blockModel(Array<Literal *> &implicants, unsigned size)
+{
   SATLiteralStack blockingClause;
 
-  for(int i = 0; i < size; ++i) {
+  for (int i = 0; i < size; ++i) {
     auto impl = implicants[i];
-    auto satImpl = _prp.toSAT(_prp.isBindingLiteral(impl)? _prp.getBooleanBinding(impl) : impl);
+    auto satImpl = _prp.toSAT(_prp.isBindingLiteral(impl) ? _prp.getBooleanBinding(impl) : impl);
     blockingClause.push(satImpl.opposite());
   }
 
   auto clause = SATClause::fromStack(blockingClause);
   if (_showProof)
     std::cout << "Blocking Clause: " << clause->toString() << std::endl;
+  _solver->addClause(clause);
+}
+
+void OneBindingAlgorithm::blockModel(LiteralStack* implicants){
+  if(_showProof) env.out() << "||||||||||||||||||||||||||||||||| blocking model |||||||||||||||||||||||||||||||||" << std::endl;
+
+  SATLiteralStack blockingClause;
+
+  LiteralStack::Iterator it(*implicants);
+  while (it.hasNext()) {
+    auto impl = it.next();
+    // std::cout<< "Adding " << impl->toString() << std::endl;
+    auto satImpl = _prp.toSAT(_prp.isBindingLiteral(impl) ? _prp.getBooleanBinding(impl) : impl);
+    blockingClause.push(satImpl.opposite());
+  }
+
+  auto clause = SATClause::fromStack(blockingClause);
+  if (_showProof)
+    env.out() << "Blocking Clause: " << clause->toString() << std::endl;
   _solver->addClause(clause);
 }
 
