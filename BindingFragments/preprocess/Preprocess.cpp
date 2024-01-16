@@ -533,27 +533,16 @@ void BindingFragments::PreprocessV2::satClausify(){
 
 }
 
-// void BindingFragments::PreprocessV2::printBindings()
-// {
-//   auto it = _bindings.domain();
-//   while (it.hasNext()) {
-//     auto b = it.next();
-//     std::cout << "Boolean Binding functor: " << b << " Name: " << env.signature->predicateName(b) << std::endl;
-//     auto value = _bindings.get(b);
-//     auto mll = value.bindingLiteral;
-//     std::cout << "\tBinding: " << mll->toString() << " Functor: " << mll->functor() << std::endl;
-//     auto stk = value.bindingClauses;
-//     std::cout << "\tSATClauseStack: " << std::endl;
-//     printStack(stk);
-//   }
-//   std::cout << std::endl;
-// }
 void BindingFragments::PreprocessV2::printSatClauses()
 {
+  if(!env.options->showPreprocessing()) return;
+
+  env.beginOutput();
   SATClauseStack::Iterator it(_clauses);
   while (it.hasNext()) {
-    cout << it.next()->toString() << endl;
+    env.out() << it.next()->toString() << endl;
   }
+  env.endOutput();
 }
 
 // SATClauseStack *BindingFragments::PreprocessV2::getSatClauses(Literal *literal)

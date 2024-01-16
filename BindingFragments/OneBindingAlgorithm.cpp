@@ -56,9 +56,20 @@ bool OneBindingAlgorithm::solve(){
     Array<Literal*> implicants;
     unsigned l = _implicants(implicants);
 
+    // std::cout << "implicants: " << std::endl;
+    // for(int i = 0; i < l; ++i) {
+    //   std::cout<< implicants[i]->toString() << ", ";
+    // }
+    // std::cout<< std::endl;
+    // exit(0);
 
-    std::sort(implicants.begin(), implicants.begin()+l, GroundArityAndTermComparator);
-
+    {
+      TIME_TRACE(TimeTrace::IMPLICANT_SORTING)
+      // std::sort(implicants.begin(), implicants.begin()+l, GroundArityAndTermComparator); // 'subterm_sort'
+      std::sort(implicants.begin(), implicants.begin()+l, GroundAndArityComparator); // 'no_subterm_sort'
+    }
+    // 1354
+    // 884
     if (_showProof) {
       env.out() << "Implicants ordered by arity: " << std::endl;
       for(int i = 0; i < l; i++){
@@ -208,8 +219,8 @@ void OneBindingAlgorithm::blockModel(Array<Literal *> &implicants, unsigned size
   }
 
   auto clause = SATClause::fromStack(blockingClause);
-  if (_showProof)
-    std::cout << "Blocking Clause: " << clause->toString() << std::endl;
+  if (_showProof) env.out() << "Blocking Clause: " << clause->toString() << std::endl;
+
   _solver->addClause(clause);
 }
 
@@ -221,7 +232,6 @@ void OneBindingAlgorithm::blockModel(LiteralStack* implicants){
   LiteralStack::Iterator it(*implicants);
   while (it.hasNext()) {
     auto impl = it.next();
-    // std::cout<< "Adding " << impl->toString() << std::endl;
     auto satImpl = _prp.toSAT(_prp.isBindingLiteral(impl) ? _prp.getBooleanBinding(impl) : impl);
     blockingClause.push(satImpl.opposite());
   }

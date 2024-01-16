@@ -41,12 +41,26 @@ private:
   bool _distributeForall;
 };
 
-typedef DHMap<Literal*, Formula*> BindingFormulaMap;
+class LiteralHash1 {
+public:
+  static unsigned hash(const Literal* lit){
+    return DefaultHash::hash(lit->getId());
+  }
+};
 
-typedef DHMap<Literal*, LiteralList*> BooleanToLiteralBindingMap;
-typedef DHMap<Literal*, Literal*> LiteralToBooleanBindingMap;
+class LiteralHash2 {
+public:
+  static unsigned hash(const Literal* lit){
+    return DefaultHash2::hash(lit->getId());
+  }
+};
 
-typedef DHMap<Literal*, SAT::SATClauseStack*> BindingClauseMap;
+typedef DHMap<Literal*, Formula*, LiteralHash1, LiteralHash2> BindingFormulaMap;
+
+typedef DHMap<Literal*, LiteralList*, LiteralHash1, LiteralHash2> BooleanToLiteralBindingMap;
+typedef DHMap<Literal*, Literal*, LiteralHash1, LiteralHash2> LiteralToBooleanBindingMap;
+
+typedef DHMap<Literal*, SAT::SATClauseStack*, LiteralHash1, LiteralHash2> BindingClauseMap;
 
 class PreprocessV2 {
 public:
@@ -74,7 +88,6 @@ public:
 
 
 
-  // void printBindings();
   void printSatClauses();
 
 
@@ -193,11 +206,11 @@ private:
 
   unsigned _maxBindingVarNo = 0;
   int _bindingCount = 0;
-  int _minBooleanBindingFunctor = -1;
-  int _maxBooleanBindingFunctor = 0;
+  unsigned _minBooleanBindingFunctor = -1;
+  unsigned _maxBooleanBindingFunctor = 0;
 
-  int _minLiteralBindingFunctor = -1;
-  int _maxLiteralBindingFunctor = 0;
+  unsigned _minLiteralBindingFunctor = -1;
+  unsigned _maxLiteralBindingFunctor = 0;
 
 
 

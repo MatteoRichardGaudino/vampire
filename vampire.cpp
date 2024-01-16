@@ -213,7 +213,7 @@ Problem *do1BProving(){
           env.options->setProof(Options::Proof::OFF);
           return prb;
         }
-      }
+    }
 
     preprov2.ennf();
     preprov2.topBooleanFormulaAndBindings();
@@ -224,8 +224,7 @@ Problem *do1BProving(){
     preprov2.printBooleanToLiteralBindings();
     preprov2.satClausify();
 
-    // preprov2.printBindings();
-    // preprov2.printSatClauses();
+    preprov2.printSatClauses();
   }
   ///////////////////////////////////////
 

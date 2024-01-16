@@ -110,6 +110,7 @@ public:
   static constexpr const char* const MAXIMAL_UNIFIABLE_SUBSET = "Maximal unifiable subset";
   static constexpr const char* const MAXIMAL_UNIFIABLE_SUBSET_SAT_SOLVING = "Maximal unifiable subset sat solving";
   static constexpr const char* const ONE_BINDING_ALGORITHM = "One binding algorithm";
+  static constexpr const char* const IMPLICANT_SORTING = "Implicant sorting";
 
 
   
