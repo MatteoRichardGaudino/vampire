@@ -1,10 +1,10 @@
 #!/bin/sh
 inFile=fof_classification.txt
-mode=vampire
+mode=1b
 # One_Binding, Conjunctive_Binding
-fragment="Conjunctive_Binding"
+#fragment="Conjunctive_Binding"
 prefix="fof_"
-suffix="_no_subterm_sort_det"
+suffix="_subterm_sort_gr2"
 
 for fragment in "One_Binding" "Conjunctive_Binding"
 do

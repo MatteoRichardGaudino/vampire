@@ -323,7 +323,7 @@ BindingFragments::MaximalUnifiableSubsets::MaximalUnifiableSubsets(
 
 bool BindingFragments::MaximalUnifiableSubsets::_groundLiteralMus(Literal *literal){
   if(_s[literal] != 0) return true;
-  auto uIt = _tree.iterator<SubstitutionTree::UnificationsIterator>(literal, true, false);
+  auto uIt = _tree.iterator<SubstitutionTree::UnificationsIterator>(literal, false, false);
   while (uIt.hasNext()) {
     auto res = uIt.next();
     auto u = res.data->literal;

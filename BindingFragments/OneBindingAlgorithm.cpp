@@ -65,11 +65,10 @@ bool OneBindingAlgorithm::solve(){
 
     {
       TIME_TRACE(TimeTrace::IMPLICANT_SORTING)
-      // std::sort(implicants.begin(), implicants.begin()+l, GroundArityAndTermComparator); // 'subterm_sort'
-      std::sort(implicants.begin(), implicants.begin()+l, GroundAndArityComparator); // 'no_subterm_sort'
+      std::sort(implicants.begin(), implicants.begin()+l, GroundArityAndTermComparator); // 'subterm_sort'
+      //std::sort(implicants.begin(), implicants.begin()+l, GroundAndArityComparator); // 'no_subterm_sort'
     }
-    // 1354
-    // 884
+
     if (_showProof) {
       env.out() << "Implicants ordered by arity: " << std::endl;
       for(int i = 0; i < l; i++){
@@ -79,12 +78,36 @@ bool OneBindingAlgorithm::solve(){
     }
 
 
+    // check if implicants contains a literal binding. if not, then the problem is ground and return true
+    bool hasBinding = false;
+    for(int i = l-1; i >= 0; --i) {
+      if(_prp.isBindingLiteral(implicants[i])) {
+        hasBinding = true;
+        break;
+      }
+    }
+    if(!hasBinding) {
+      if(_showProof) {
+        env.out() << "No binding found in implicants, Problem is ground" << std::endl;
+        env.endOutput();
+      }
+      return true;
+    }
+
+
+
     ArityGroupIterator groupIt(implicants, l);
 
     while (RESULT && groupIt.hasNext()){
       auto group = groupIt.next();
       MaximalUnifiableSubsets mus(group, [&](LiteralStack solution){
         TIME_TRACE(TimeTrace::MAXIMAL_UNIFIABLE_SUBSET_SAT_SOLVING)
+        if(solution.length() == 1) {
+          if(!_prp.isBindingLiteral(solution.top())) return true; // a single ground literal is always satisfiable
+
+          if(_prp.getSatClauses(solution.top())->length() == 1) return true;
+        }
+
         auto solver = _newSatSolver();
         solver->ensureVarCount(_prp.maxBindingVarNo());
 
@@ -100,15 +123,19 @@ bool OneBindingAlgorithm::solve(){
         auto status = solver->solve();
         if(_showProof) env.out() << "::::: " << status << std::endl;
         delete solver;
+
+        // vstring tmp;
+        // std::cin >> tmp;
+
         return status == SATSolver::SATISFIABLE;
       });
 
       while (group.hasNext()){
         auto lit = group.next();
         TIME_TRACE(TimeTrace::MAXIMAL_UNIFIABLE_SUBSET)
-        if(_showProof) {
-          env.out() << "---------- mus for " << lit->toString() << " ------------" << std::endl;
-        }
+        // if(_showProof) {
+        //   env.out() << "---------- mus for " << lit->toString() << " ------------" << std::endl;
+        // }
         bool res = mus.musV2(lit);
         if(!res){
           RESULT = false;
