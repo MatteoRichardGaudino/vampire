@@ -100,42 +100,19 @@ bool OneBindingAlgorithm::solve(){
 
     while (RESULT && groupIt.hasNext()){
       auto group = groupIt.next();
-      MaximalUnifiableSubsets mus(group, [&](LiteralStack solution){
-        TIME_TRACE(TimeTrace::MAXIMAL_UNIFIABLE_SUBSET_SAT_SOLVING)
-        if(solution.length() == 1) {
-          if(!_prp.isBindingLiteral(solution.top())) return true; // a single ground literal is always satisfiable
-
-          if(_prp.getSatClauses(solution.top())->length() == 1) return true;
-        }
-
-        auto solver = _newSatSolver();
-        solver->ensureVarCount(_prp.maxBindingVarNo());
-
-        if(_showProof) env.out() << "MUS: ";
-        LiteralStack::Iterator solIt(solution);
-        while (solIt.hasNext()) {
-          auto lit = solIt.next();
-          if(_showProof) env.out() << lit->toString() << " ";
-          SATClauseStack* stk = _prp.getSatClauses(lit);
-          SATClauseStack::Iterator it(*stk);
-          while (it.hasNext()) solver->addClause(it.next());
-        }
-        auto status = solver->solve();
-        if(_showProof) env.out() << "::::: " << status << std::endl;
-        delete solver;
-
-        // vstring tmp;
-        // std::cin >> tmp;
-
-        return status == SATSolver::SATISFIABLE;
-      });
+      MaximalUnifiableSubsets mus(group,
+        [&](LiteralStack* solution){ return _internalSat(solution); },
+        [&](Literal* lit){ return _onAddedToGroundMus(lit); },
+        [&](){ _onStartGroundMus(); },
+        [&](){ _onEndGroundMus(); }
+        );
 
       while (group.hasNext()){
         auto lit = group.next();
         TIME_TRACE(TimeTrace::MAXIMAL_UNIFIABLE_SUBSET)
-        // if(_showProof) {
-        //   env.out() << "---------- mus for " << lit->toString() << " ------------" << std::endl;
-        // }
+        if(_showProof) {
+          env.out() << "---------- mus for " << lit->toString() << " ------------" << std::endl;
+        }
         bool res = mus.musV2(lit);
         if(!res){
           RESULT = false;
@@ -174,6 +151,37 @@ bool OneBindingAlgorithm::solve(){
   }
 
   return false;
+}
+
+
+bool OneBindingAlgorithm::_internalSat(LiteralStack *solution){
+  TIME_TRACE(TimeTrace::MAXIMAL_UNIFIABLE_SUBSET_SAT_SOLVING)
+  if(solution->length() == 1) {
+    if(!_prp.isBindingLiteral(solution->top())) return true; // a single ground literal is always satisfiable
+
+    if(_prp.getSatClauses(solution->top())->length() == 1) return true;
+  }
+
+  auto solver = _newSatSolver();
+  solver->ensureVarCount(_prp.maxBindingVarNo());
+
+  if(_showProof) env.out() << "MUS: ";
+  LiteralStack::Iterator solIt(*solution);
+  while (solIt.hasNext()) {
+    auto lit = solIt.next();
+    if(_showProof) env.out() << lit->toString() << " ";
+    SATClauseStack* stk = _prp.getSatClauses(lit);
+    SATClauseStack::Iterator it(*stk);
+    while (it.hasNext()) solver->addClause(it.next());
+  }
+  auto status = solver->solve();
+  if(_showProof) env.out() << "::::: " << status << std::endl;
+  delete solver;
+
+  // vstring tmp;
+  // std::cin >> tmp;
+
+  return status == SATSolver::SATISFIABLE;
 }
 
 
@@ -251,8 +259,10 @@ void OneBindingAlgorithm::blockModel(Array<Literal *> &implicants, unsigned size
   _solver->addClause(clause);
 }
 
-void OneBindingAlgorithm::blockModel(LiteralStack* implicants){
-  if(_showProof) env.out() << "||||||||||||||||||||||||||||||||| blocking model |||||||||||||||||||||||||||||||||" << std::endl;
+void OneBindingAlgorithm::blockModel(LiteralStack *implicants)
+{
+  if (_showProof)
+    env.out() << "||||||||||||||||||||||||||||||||| blocking model |||||||||||||||||||||||||||||||||" << std::endl;
 
   SATLiteralStack blockingClause;
 

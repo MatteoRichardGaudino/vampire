@@ -31,6 +31,35 @@ private:
   void blockModel(Array<Literal*>& implicants, unsigned size);
 
   void blockModel(LiteralStack* implicants);
+
+  bool _internalSat(LiteralStack* solution);
+
+
+  PrimitiveProofRecordingSATSolver* _gmus_solver = nullptr;
+  void _onStartGroundMus(){
+    std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&& onStatrtGmus &&&&&&&&&&&&&&&&&&&&&&&&&&&" << std::endl;
+    _gmus_solver = _newSatSolver();
+    _gmus_solver->ensureVarCount(_prp.maxBindingVarNo());
+  }
+  bool _onAddedToGroundMus(Literal* lit){
+    TIME_TRACE(TimeTrace::MAXIMAL_UNIFIABLE_SUBSET_SAT_SOLVING)
+    // std::cout << "onAddedToGroundMus" << lit->toString();
+
+    SATClauseStack* stk = _prp.getSatClauses(lit);
+    SATClauseStack::Iterator it(*stk);
+    while (it.hasNext()) _gmus_solver->addClause(it.next());
+
+    auto status = _gmus_solver->solve() == SATSolver::SATISFIABLE;
+
+    // std::cout << ":::" << (status? "SAT" : "UNSAT") << std::endl;
+    return status;
+  }
+  void _onEndGroundMus(){
+    std::cout << "%%%%%%%%%%%%%%%%%%%%% onEndGroundMus %%%%%%%%%%%%%%%%%%%%%%%%%%%" << std::endl;
+    delete _gmus_solver;
+    _gmus_solver = nullptr;
+  }
+
 };
 
 } // BindingFragments

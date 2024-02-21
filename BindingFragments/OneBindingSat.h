@@ -67,11 +67,19 @@ private:
 
 class MaximalUnifiableSubsets{
 public:
-  MaximalUnifiableSubsets(ArityGroupIterator::GroupIterator group, std::function<bool(LiteralStack)> fun);
+  MaximalUnifiableSubsets(ArityGroupIterator::GroupIterator group, std::function<bool(LiteralStack*)> fun);
+  MaximalUnifiableSubsets(
+    ArityGroupIterator::GroupIterator group,
+    std::function<bool(LiteralStack *)> fun,
+    std::function<bool(Literal*)> onAdded,
+    std::function<void(void)> onStart,
+    std::function<void(void)> onEnd
+    );
 
   bool _groundLiteralMus(Literal * literal);
   bool mus(Literal* literal);
 
+  bool _groundLiteralMusV2(Literal * literal);
   bool musV2(Literal* literal);
   bool _musV2(Literal* literal, LiteralList*& fToFree);
 
@@ -83,7 +91,11 @@ private:
   ArityGroupIterator::GroupIterator _group;
   Indexing::SubstitutionTree _tree;
   std::map<Literal*, int> _s;
-  std::function<bool(LiteralStack)> _fun;
+  std::function<bool(LiteralStack*)> _fun;
+
+  std::function<void(void)> _onGmusStart = nullptr;
+  std::function<bool(Literal*)> _onGmusAdded = nullptr;
+  std::function<void(void)> _onGmusEnd = nullptr;
 
   LiteralStack _solution;
 

@@ -158,7 +158,9 @@ public:
     auto it = _literalToBooleanBindings.items();
     while (it.hasNext()) {
       auto item = it.next();
-      env.out() << item.first->toString() << " => " << item.second->toString() << std::endl;
+      env.out() << item.first->toString() <<
+        (item.first->ground()? " (Ground)" : "")
+        << " => " << item.second->toString() << std::endl;
     }
     env.out() << "======== End Literal Bindings to Boolean Bindings ========" << std::endl;
     env.endOutput();

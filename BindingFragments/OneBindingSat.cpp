@@ -117,12 +117,12 @@ bool BindingFragments::OneBindingSat::solve(){
 
     while (RESULT && groupIt.hasNext()){
       auto group = groupIt.next();
-      MaximalUnifiableSubsets mus(group, [&](LiteralStack solution){
+      MaximalUnifiableSubsets mus(group, [&](LiteralStack* solution){
         TIME_TRACE(TimeTrace::MAXIMAL_UNIFIABLE_SUBSET_SAT_SOLVING)
         auto solver = _newSatSolver();
         solver->ensureVarCount(_maxBindingVarNo);
         if(_showProof) cout<< "MUS: ";
-        LiteralStack::Iterator solIt(solution);
+        LiteralStack::Iterator solIt(*solution);
         while (solIt.hasNext()) {
           auto lit = solIt.next();
           if(_showProof) cout<< lit->toString() << " ";
@@ -308,9 +308,16 @@ BindingFragments::ArityGroupIterator::GroupIterator BindingFragments::ArityGroup
 
 
 BindingFragments::MaximalUnifiableSubsets::MaximalUnifiableSubsets(
-    ArityGroupIterator::GroupIterator group, std::function<bool(LiteralStack)> fun) : _group(group), _tree(false, false), _fun(fun), _solution(16)
-{
+    ArityGroupIterator::GroupIterator group, std::function<bool(LiteralStack *)> fun)
+: MaximalUnifiableSubsets(group, fun, nullptr, nullptr, nullptr){}
 
+BindingFragments::MaximalUnifiableSubsets::MaximalUnifiableSubsets(
+  ArityGroupIterator::GroupIterator group,
+  std::function<bool(LiteralStack *)> fun,
+  std::function<bool(Literal *)> onAdded,
+  std::function<void()> onStart,
+  std::function<void()> onEnd) : _group(group), _tree(false, false), _fun(fun), _solution(16), _onGmusAdded(onAdded), _onGmusStart(onStart), _onGmusEnd(onEnd)
+{
   _buildTree();
 
   while (_group.hasNext()) {
@@ -319,7 +326,6 @@ BindingFragments::MaximalUnifiableSubsets::MaximalUnifiableSubsets(
   }
   _group.reset();
 }
-
 
 bool BindingFragments::MaximalUnifiableSubsets::_groundLiteralMus(Literal *literal){
   if(_s[literal] != 0) return true;
@@ -332,12 +338,15 @@ bool BindingFragments::MaximalUnifiableSubsets::_groundLiteralMus(Literal *liter
       _solution.push(u);
     }
   }
-  bool res = _fun(_solution);
+  // cout<< "G"; // TODO
+  bool res = _fun(&_solution);
   if(res) _solution.reset();
   return res;
 }
-bool BindingFragments::MaximalUnifiableSubsets::mus(Literal *literal){
-  if(_s[literal] != 0) return true;
+bool BindingFragments::MaximalUnifiableSubsets::mus(Literal *literal)
+{
+  if (_s[literal] != 0)
+    return true;
   if (literal->ground()) {
     return _groundLiteralMus(literal);
   }
@@ -385,7 +394,7 @@ bool BindingFragments::MaximalUnifiableSubsets::_mus(Literal *literal, int depth
   }
 
   if(isMax){ // && (depth == 1 => _sol.top() != binding)
-      if(!_fun(_solution)){
+      if(!_fun(&_solution)){
         return false;
       }
   }
@@ -396,6 +405,33 @@ bool BindingFragments::MaximalUnifiableSubsets::_mus(Literal *literal, int depth
   //      cout<< "Unblock: " << _.first->toString() << endl;
       }
   }
+  return true;
+}
+bool BindingFragments::MaximalUnifiableSubsets::_groundLiteralMusV2(Literal *literal){
+  if(_s[literal] != 0) return true;
+  if(_onGmusStart != nullptr) _onGmusStart();
+  auto uIt = _tree.iterator<SubstitutionTree::UnificationsIterator>(literal, false, false);
+  while (uIt.hasNext()) {
+    auto res = uIt.next();
+    auto u = res.data->literal;
+    if(_s[u] == 0) {
+      if(u->ground()) _s[u] = -1;
+      _solution.push(u);
+      if(_onGmusAdded != nullptr) {
+        bool r = _onGmusAdded(u);
+        if(!r) return false;
+      }
+    }
+  }
+  if(_onGmusEnd != nullptr) _onGmusEnd();
+
+  if(_onGmusStart == nullptr && _onGmusAdded == nullptr && _onGmusEnd == nullptr) {
+    cout<< "G"; // TODO
+    bool res = _fun(&_solution);
+    if(res) _solution.reset();
+    return res;
+  }
+
   return true;
 }
 
@@ -425,14 +461,25 @@ bool BindingFragments::MaximalUnifiableSubsets::_musV2(Literal* literal, Literal
     if(_s[u] == 0){
       _s[u] = 1;
 
+      // std::cout<< "Getting " << u->toString() << "From sTree" << endl;
       auto l1 = res.subst->applyToQuery(literal);
       if(l1 == literal) {
+        // std::cout<< "l1 == literal " << endl;
         auto u1 = res.subst->applyToResult(u);
+        // std::cout<< "u == subst(1)? " << (u1 == u) << endl;
         LiteralList::push(u, (u1 == u) ? fToFree : toFree);
+        // LiteralList::push(u,  toFree);
       } else {
         isMax = false;
-        if(!_musV2(l1, toFree)) return false;
+        // cout<< "rec call on " << l1->toString() << endl;
+        auto locTofree = LiteralList::empty();
+        if(!_musV2(l1, locTofree)) return false;
         _s[u] = -1;
+        for(auto locIt = LiteralList::Iterator(locTofree);
+          locIt.hasNext();
+          _s[locIt.next()] = -1
+        ){}
+        LiteralList::concat(toFree, locTofree);
         LiteralList::push(u, toFree);
       }
     }
@@ -445,7 +492,7 @@ bool BindingFragments::MaximalUnifiableSubsets::_musV2(Literal* literal, Literal
         _solution.push(_.first);
     }
     // ------
-    if(!_fun(_solution)){
+    if(!_fun(&_solution)){
       delete toFree;
       return false;
     }
