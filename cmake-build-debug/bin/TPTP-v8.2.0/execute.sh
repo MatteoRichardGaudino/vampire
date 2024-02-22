@@ -27,7 +27,7 @@ do
     echo Launching $problem
     # ../vampire_dbg_master_6839 --mode vampire -p off --show_preprocessing false -t 5m -m 100000000 -tstat off -av off -tha off -updr off -fs off -fsr off
     res=$(../vampire_dbg_master_6841 --mode $mode -sa otter --input_syntax tptp -t 10m -m 12000 --show_preprocessing false -p off -tstat on -av off -tha off -updr off -fs off -fsr off $path)
-#    res=$(../vampire_dbg_master_6839 --mode $mode -sa otter --input_syntax tptp -t 5m -m 8000 --show_preprocessing false -p off -tstat on $path)
+#    res=$(../vampire_dbg_master_6841 --mode $mode -sa otter --input_syntax tptp -t 10m -m 12000 --show_preprocessing false -p off -tstat on $path)
 
     #echo "$res"
     mkdir -p "$prefix$mode$suffix/$fragment"

@@ -108,6 +108,8 @@ private:
 
 bool GroundArityAndTermComparator(Literal *&l1, Literal *&l2);
 bool GroundAndArityComparator(Literal *&l1, Literal *&l2);
+bool ArityComparator(Literal *&l1, Literal *&l2);
+
 
 class OneBindingSat {
   public:

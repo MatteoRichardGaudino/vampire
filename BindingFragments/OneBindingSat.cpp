@@ -159,6 +159,8 @@ bool BindingFragments::OneBindingSat::solve(){
     blockModel(implicants, l);
   }
 
+  // x0 -> z(x0, x1)
+
   if(_showProof) cout<<  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ UNSAT ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
   return false;
 }
@@ -345,11 +347,11 @@ bool BindingFragments::MaximalUnifiableSubsets::_groundLiteralMus(Literal *liter
 }
 bool BindingFragments::MaximalUnifiableSubsets::mus(Literal *literal)
 {
-  if (_s[literal] != 0)
-    return true;
-  if (literal->ground()) {
-    return _groundLiteralMus(literal);
-  }
+  // if (_s[literal] != 0)
+  //   return true;
+  // if (literal->ground()) {
+  //   return _groundLiteralMus(literal);
+  // }
 
   _s[literal] = 1;
   _solution.push(literal);
@@ -373,16 +375,16 @@ bool BindingFragments::MaximalUnifiableSubsets::_mus(Literal *literal, int depth
         unsigned int pop = 1;
 
         auto sub = res.subst->applyToQuery(literal);
-        while (sub == literal && uIt.hasNext()) {
-          res = uIt.next();
-          u = res.data->literal;
-          if(_s[u] == 0){
-            _s[u] = depth;
-            _solution.push(u);
-            pop++;
-            sub = res.subst->applyToQuery(literal);
-          }
-        }
+        // while (sub == literal && uIt.hasNext()) {
+        //   res = uIt.next();
+        //   u = res.data->literal;
+        //   if(_s[u] == 0){
+        //     _s[u] = depth;
+        //     _solution.push(u);
+        //     pop++;
+        //     sub = res.subst->applyToQuery(literal);
+        //   }
+        // }
 
         if(!_mus(sub, depth+1)) return false;
 
@@ -443,10 +445,14 @@ bool BindingFragments::MaximalUnifiableSubsets::musV2(Literal* literal){
   }
 
   _s[literal] = 1;
-  LiteralList* l = LiteralList::empty();
-  bool res = _musV2(literal, l);
+  LiteralList* locTofree = LiteralList::empty();
+  bool res = _musV2(literal, locTofree);
   _s[literal] = -1;
-  delete l;
+  for(auto locIt = LiteralList::Iterator(locTofree);
+    locIt.hasNext();
+    _s[locIt.next()] = -1
+  ){}
+  delete locTofree;
   return res;
 }
 bool BindingFragments::MaximalUnifiableSubsets::_musV2(Literal* literal, LiteralList*& fToFree){
@@ -587,6 +593,18 @@ bool BindingFragments::GroundAndArityComparator(Literal *&l1, Literal *&l2){
 
   return l1->functor() < l2->functor();
 }
+
+bool BindingFragments::ArityComparator(Literal *&l1, Literal *&l2){
+  ASS(l1->shared());
+  ASS(l2->shared());
+
+  if(l1 == l2) return false;
+
+  if (l1->arity() != l2->arity())
+    return l1->arity() < l2->arity();
+  return l1->functor() < l2->functor();
+}
+
 
 
 void BindingFragments::MaximalUnifiableSubsets::_buildTree(){

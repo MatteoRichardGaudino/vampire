@@ -272,7 +272,8 @@ void BindingFragments::PreprocessV2::topBooleanFormulaAndBindings(){
     uit.replace(
       new FormulaUnit(
         topFormula,
-        Inference(FormulaTransformation(InferenceRule::DEFINITION_FOLDING, unit))
+        // Inference(FormulaTransformation(InferenceRule::DEFINITION_FOLDING, unit))
+        Inference(NonspecificInference0(UnitInputType::AXIOM, InferenceRule::DEFINITION_FOLDING))
       )
     );
   }

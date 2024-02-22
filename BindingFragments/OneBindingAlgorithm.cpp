@@ -78,6 +78,7 @@ bool OneBindingAlgorithm::solve(){
     }
 
 
+    // OPT 1
     // check if implicants contains a literal binding. if not, then the problem is ground and return true
     bool hasBinding = false;
     for(int i = l-1; i >= 0; --i) {
@@ -113,9 +114,12 @@ bool OneBindingAlgorithm::solve(){
         if(_showProof) {
           env.out() << "---------- mus for " << lit->toString() << " ------------" << std::endl;
         }
+        // OPT 3
         bool res = mus.musV2(lit);
+        // bool res = mus.mus(lit);
         if(!res){
           RESULT = false;
+          // OPT 2
           blockModel(mus.getSolution());
           break;
         }
@@ -142,7 +146,7 @@ bool OneBindingAlgorithm::solve(){
       return true;
     }
 
-    //blockModel(implicants, l);
+    // blockModel(implicants, l);
   }
   env.statistics->avgTimePerModel = avgTimePerModel / modelCount;
   if(_showProof) {
